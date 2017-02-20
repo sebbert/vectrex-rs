@@ -1,0 +1,8 @@
+[package]
+name = "vectrex-rs"
+version = "0.1.0"
+authors = ["Sebastian Reinhard <sebastian@sebbert.me>"]
+
+[dependencies]
+log = "0.3.*"
+env_logger = "0.4.*"
