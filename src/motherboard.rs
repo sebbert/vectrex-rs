@@ -33,13 +33,23 @@ impl Motherboard {
 	}
 
 	pub fn read_u16(&self, addr: u16) -> u16 {
-		// Do two u8 reads for now, but should probably do the matching here as well
-		let hi = self.read_u8(addr) as u16;
-		let lo = self.read_u8(addr + 1) as u16;
-
-		(hi << 8) | lo
+		match addr {
+			CARTRIDGE_START ... CARTRIDGE_END => {
+				match self.cartridge {
+					Some(ref cartridge) => cartridge.read_u16(addr - CARTRIDGE_START),
+					None => {
+						warn!("Read from non-existent cartridge (at 0x{:04x})", addr);
+						0
+					}
+				}
+			}
+			BIOS_START ... BIOS_END => {
+				self.bios.read_u16(addr - BIOS_START)
+			}
+			_ => panic!("Read from unmapped address: 0x{:04x}", addr)
+		}
 	}
-
+	
 	pub fn write_u8(&self, addr: u16, value: u8) {
 		match addr {
 			CARTRIDGE_START ... CARTRIDGE_END => {
