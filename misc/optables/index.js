@@ -109,7 +109,7 @@ function makeBranch(instr, variant) {
 		variantMacro += (op.bytes-1) * 8;
 	}
 
-	line += ` => ${variantMacro}!(${op.cycles}, Self::instr_${instr.mnemonic.toLowerCase()})`;
+	line += ` => ${variantMacro}!(Self::instr_${instr.mnemonic.toLowerCase()}, ${op.cycles})`;
 	return line;
 }
 
