@@ -1,5 +1,6 @@
 use motherboard::Motherboard;
-use rom::Rom;
+use bios::Bios;
+use cartridge::Cartridge;
 use mc6809::Mc6809;
 
 pub struct Vectrex {
@@ -8,8 +9,8 @@ pub struct Vectrex {
 }
 
 impl Vectrex {
-	pub fn new(bios: Rom, cartridge: Option<Rom>) -> Vectrex {
-		let mobo = Motherboard::new(bios, None);
+	pub fn new(bios: Bios, cartridge: Option<Cartridge>) -> Vectrex {
+		let mobo = Motherboard::new(bios, cartridge);
 		let mut cpu = Mc6809::new();
 		cpu.reset(&mobo);
 

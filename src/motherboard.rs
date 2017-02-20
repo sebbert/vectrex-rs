@@ -1,13 +1,14 @@
 use mem_map::*;
-use rom::Rom;
+use bios::Bios;
+use cartridge::Cartridge;
 
 pub struct Motherboard {
-	bios: Rom,
-	cartridge: Option<Rom>
+	bios: Bios,
+	cartridge: Option<Cartridge>
 }
 
 impl Motherboard {
-	pub fn new(bios: Rom, cartridge: Option<Rom>) -> Motherboard {
+	pub fn new(bios: Bios, cartridge: Option<Cartridge>) -> Motherboard {
 		Motherboard {
 			bios: bios,
 			cartridge: cartridge

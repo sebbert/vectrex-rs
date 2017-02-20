@@ -1,17 +1,28 @@
-pub struct Rom {
+use std::result;
+use mem_map::CARTRIDGE_LENGTH;
+
+pub struct Cartridge {
 	bytes: Box<[u8]>,
-	bytes_ptr: *mut u8
+	bytes_ptr: *const u8
 }
 
-impl Rom {
-	pub fn from_bytes(bytes: &[u8]) -> Rom {
-		let mut bytes = bytes.to_vec().into_boxed_slice();
-		let bytes_ptr = bytes.as_mut_ptr();
+pub enum Error {
+	InvalidCartridgeSize
+}
 
-		Rom {
+impl Cartridge {
+	pub fn from_bytes(bytes: &[u8]) -> Result<Cartridge, Error> {
+		if bytes.len() > CARTRIDGE_LENGTH as usize {
+			return Err(Error::InvalidCartridgeSize)
+		}
+
+		let mut bytes = bytes.to_vec().into_boxed_slice();
+		let bytes_ptr = bytes.as_ptr();
+
+		Ok(Cartridge {
 			bytes: bytes,
 			bytes_ptr: bytes_ptr
-		}
+		})
 	}
 
 	pub fn read_u8(&self, addr: u16) -> u8 {
