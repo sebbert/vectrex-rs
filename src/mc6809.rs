@@ -3,10 +3,6 @@
 use instruction::*;
 use motherboard::Motherboard;
 
-pub enum CcFlag {
-	Carry = 0
-}
-
 #[derive(Default)]
 #[allow(dead_code)]
 pub struct Mc6809 {
