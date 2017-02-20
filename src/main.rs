@@ -11,6 +11,7 @@ mod vectrex;
 
 use rom::Rom;
 use vectrex::Vectrex;
+use instruction::Opcode;
 
 use std::env;
 use std::io::prelude::*;
@@ -24,6 +25,12 @@ fn main() {
 	let mut vectrex = Vectrex::new(Rom::from_bytes(bios), None);
 
 	for _ in 0..80 {
+		{
+
+			let op_u16 = vectrex.motherboard().read_u16(vectrex.cpu().reg_pc());
+			let opcode = Opcode::from_u16(op_u16);
+			println!("] {:?}", opcode);
+		}
 		vectrex.step();
 	}
 }

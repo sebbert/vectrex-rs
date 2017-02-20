@@ -22,4 +22,12 @@ impl Vectrex {
 	pub fn step(&mut self) {
 		self.cpu.step(&mut self.motherboard);
 	}
+
+	pub fn cpu(&self) -> &Mc6809 {
+		&self.cpu
+	}
+
+	pub fn motherboard(&self) -> &Motherboard {
+		&self.motherboard
+	}
 }
