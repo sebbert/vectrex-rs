@@ -42,7 +42,7 @@ impl Bios {
 			let hi = *self.bytes_ptr.offset(addr as _) as u16;
 			let lo = *self.bytes_ptr.offset((addr + 1) as _) as u16;
 
-			(lo << 8) | hi
+			(hi << 8) | lo
 		}
 	}
 }
