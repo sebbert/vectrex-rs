@@ -772,7 +772,7 @@ impl Mc6809 {
 	pub fn reg_b(&self) -> u8 { self.reg_b }
 
 	pub fn reg_d(&self) -> u16 {
-		((self.reg_b as u16) << 8) | self.reg_a as u16
+		((self.reg_a as u16) << 8) | self.reg_b as u16
 	}
 
 	pub fn reg_dp(&self) -> u8 { self.reg_dp }
