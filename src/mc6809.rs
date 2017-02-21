@@ -32,16 +32,19 @@ macro_rules! invalid_opcode {
 
 #[allow(dead_code)]
 impl Mc6809 {	
-	pub fn new() -> Mc6809 {
-		Mc6809::default()
+	pub fn new(motherboard: &Motherboard) -> Mc6809 {
+		let mut cpu = Mc6809::default();
+		
+		cpu.cc_irq_mask = true;
+		cpu.cc_firq_mask = true;
+		
+		cpu.reg_pc = motherboard.read_u16(0xfffe);
+
+		cpu
 	}
 
 	pub fn reset(&mut self, motherboard: &Motherboard) {
-		self.cc_irq_mask = true;
-		self.cc_firq_mask = true;
-
-		// TODO
-		self.reg_pc = motherboard.read_u16(0xfffe);
+		*self = Mc6809::new(motherboard);
 	}
 
 	pub fn step(&mut self, motherboard: &mut Motherboard) -> u32 {

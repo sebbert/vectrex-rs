@@ -11,8 +11,7 @@ pub struct Vectrex {
 impl Vectrex {
 	pub fn new(bios: Bios, cartridge: Option<Cartridge>) -> Vectrex {
 		let mobo = Motherboard::new(bios, cartridge);
-		let mut cpu = Mc6809::new();
-		cpu.reset(&mobo);
+		let cpu = Mc6809::new(&mobo);
 
 		Vectrex {
 			motherboard: mobo,
