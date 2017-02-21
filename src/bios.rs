@@ -1,4 +1,3 @@
-use std::result;
 use mem_map::BIOS_LENGTH;
 
 pub struct Bios {

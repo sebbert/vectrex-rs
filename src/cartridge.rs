@@ -1,4 +1,3 @@
-use std::result;
 use mem_map::CARTRIDGE_LENGTH;
 
 pub struct Cartridge {
@@ -16,7 +15,7 @@ impl Cartridge {
 			return Err(Error::InvalidCartridgeSize)
 		}
 
-		let mut bytes = bytes.to_vec().into_boxed_slice();
+		let bytes = bytes.to_vec().into_boxed_slice();
 		let bytes_ptr = bytes.as_ptr();
 
 		Ok(Cartridge {
