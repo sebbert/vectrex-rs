@@ -55,7 +55,7 @@ impl Motherboard {
 				warn!("Attempted write to BIOS");
 			}
 			SRAM_START ... SRAM_END => {
-				self.sram.write_u8(addr, value)
+				self.sram.write_u8(addr - SRAM_START, value)
 			}
 			_ => panic!("Write to unmapped address: 0x{:04x}", addr)
 		}
