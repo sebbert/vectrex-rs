@@ -10,6 +10,16 @@ var lines = table.split("\r\n");
 
 var instructions = [];
 
+const pad = (n, c, s) => {
+	if(n <= s.length) return s;
+	for(var i = 0; i < (n - s.length); ++i) {
+		s = c + s;
+	}
+	return s;
+}
+
+const contains = (haystack, needle) => haystack.indexOf(needle) != -1;
+
 class Reader {
 	constructor(str) {
 		this.str = str;
@@ -98,15 +108,18 @@ let page3 = [];
 function makeBranch(instr, variant) {
 	let op = instr.opcodes[variant];
 
-	let line = "OP_" + instr.mnemonic;
+/*	let line = "OP_" + instr.mnemonic;
 
 	if(variant != "inherent") {
 		line += "_" + variant.toUpperCase();
 	}
+*/
+	let line = "0x" + pad(2, "0", op.opcode.toString(16));
 
 	let variantMacro = variant; 
 	if(variant == "immediate") {
-		variantMacro += (op.bytes-1) * 8;
+		let skipBytes = 1 + (contains([2,3], op.page) ? 1 : 0);
+		variantMacro += (op.bytes - skipBytes) * 8;
 	}
 
 	line += ` => ${variantMacro}!(Self::instr_${instr.mnemonic.toLowerCase()}, ${op.cycles})`;
@@ -183,33 +196,7 @@ fn instr_${instr.mnemonic.toLowerCase()}(&mut self, mobo: &Motherboard${instr.op
 
 fs.writeFileSync("match.rs", outStr);
 
-let instructionsFile = `#![allow(dead_code)]
-
-pub const OP_PAGE_2: u8 = 0x10;
-pub const OP_PAGE_3: u8 = 0x11;
-
-`;
-
-for(let i = 0; i < instructions.length; ++i) {
-	let instr = instructions[i];
-	for(let variant in instr.opcodes) {
-		try {
-			let op = instr.opcodes[variant];
-			if(op === undefined) continue;
-			let variantSuffix = (variant == "inherent") ? "" : `_${variant.toUpperCase()}`;
-			let hexOpcode = op.opcode.toString(16);
-			var paddedHexOpcode = (hexOpcode.length == 1 ? "0" : "") + hexOpcode;
-			let line = `pub const OP_${instr.mnemonic.toUpperCase()}${variantSuffix}: u8 = 0x${paddedHexOpcode};\r\n`;
-			//log(line);
-			instructionsFile += line;
-		} catch(e) {
-			console.error(e);
-		} 
-	}
-	instructionsFile = instructionsFile + "\r\n";
-}
-
-instructionsFile += "#[derive(Debug)]\r\npub enum Opcode {\r\n";
+let instructionsFile = "#[derive(Debug)]\r\npub enum Opcode {\r\n";
 
 for(let i = 0; i < instructions.length; ++i) {
 	let instr = instructions[i];
@@ -219,11 +206,19 @@ for(let i = 0; i < instructions.length; ++i) {
 
 instructionsFile += `}
 
+enum AddressingMode {
+	Inherent,
+	Immediate,
+	Direct,
+	Extended,
+	Indexed
+}
+
 impl Opcode {
 	pub fn from_u16(op_16: u16) -> Opcode {
 		let hi_op = (op_16 >> 8) as u8;
 		match hi_op {
-			OP_PAGE_2 => {
+			0x10 => {
 				let op = op_16 as u8;
 				match op {
 ${buildCases(2, 5)}
@@ -231,7 +226,7 @@ ${buildCases(2, 5)}
 					_ => panic!("Unknown opcode 0x{:02x}", op)
 				}
 			},
-			OP_PAGE_3 => {
+			0x11 => {
 				let op = op_16 as u8;
 
 				match op {
@@ -262,14 +257,19 @@ function buildCases(page, indentLevel) {
 			indent += "\t";
 		}
 
-		let cases = variants.map(v => {
-			let variantSuffix = (v == "inherent") ? "" : `_${v.toUpperCase()}`;
-			return "OP_" + instr.mnemonic.toUpperCase() + variantSuffix;
-		}).join(`\r\n${indent}| `);
+		let cases = variants.map((v, i) => {
+			//let variantSuffix = (v == "inherent") ? "" : `_${v.toUpperCase()}`;
+			let hexop = "0x" + pad(2, "0", instr.opcodes[v].opcode.toString(16));
+			let insertNewline = (i+1)%2 == 0;
+
+			return hexop
+			     + ((i == variants.length-1) ? "" : "|")
+			     //+ (insertNewline ? `\r\n${indent}` : "");
+		}).join("");
 
 		let singleVariant = variants.length == 1;
 
-		output += `${indent}${singleVariant?"":"  "}${cases}${singleVariant?" ":"\r\n"+indent}=> Opcode::${camelCaseMnemonic},\r\n`;
+		output += `${indent}${singleVariant?"":""}${cases} => Opcode::${camelCaseMnemonic},\r\n`;
 
 		let nextIsSingleVariant = true;
 		if(i < instructions.length - 1) {
@@ -278,9 +278,7 @@ function buildCases(page, indentLevel) {
 			nextIsSingleVariant = nextVariants.length == 1;
 		}
 
-		if((!singleVariant || !nextIsSingleVariant) && i != (instructions.length - 1)) {
-			output += "\r\n";
-		}
+		
 	}
 
 	return output;
@@ -298,6 +296,6 @@ instructionsFile += `
 
 instructionsFile = instructionsFile.replace(/\r\n|\n/g, "\r\n");
 
-fs.writeFileSync(path.join(__dirname, "../../src/instruction.rs"), instructionsFile);
+fs.writeFileSync(path.join(__dirname, "../../src/debugger.rs"), instructionsFile);
 
 fs.writeFileSync(path.join(__dirname, "../instructions.json"), JSON.stringify(instructions, undefined, "  "))
