@@ -1,7 +1,7 @@
 use mem_map::CARTRIDGE_LENGTH;
 
 pub struct Cartridge {
-	bytes: Box<[u8]>,
+	#[allow(dead_code)] bytes: Box<[u8]>,
 	bytes_ptr: *const u8
 }
 
@@ -25,23 +25,16 @@ impl Cartridge {
 	}
 
 	pub fn read_u8(&self, addr: u16) -> u8 {
-		if addr as usize > self.bytes.len() {
-			return 0
-		}
+		let addr = addr & 0x7fff;
 		unsafe {
 			*self.bytes_ptr.offset(addr as _)
 		}
 	}
 
 	pub fn read_u16(&self, addr: u16) -> u16 {
-		if addr as usize > self.bytes.len() - 1 {
-			return 0
-		}
-		unsafe {
-			let hi = *self.bytes_ptr.offset(addr as _) as u16;
-			let lo = *self.bytes_ptr.offset((addr + 1) as _) as u16;
+		let hi = self.read_u8(addr) as u16;
+		let lo = self.read_u8(addr + 1) as u16;
 
-			(hi << 8) | lo
-		}
+		(hi << 8) | lo
 	}
 }
