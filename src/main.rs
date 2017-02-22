@@ -4,6 +4,7 @@ extern crate env_logger;
 
 mod cartridge;
 mod bios;
+mod sram;
 mod mem_map;
 mod motherboard;
 mod debugger;

@@ -4,7 +4,9 @@ pub const CARTRIDGE_START: u16 = 0x0;
 pub const CARTRIDGE_END: u16 = 0x7fff;
 pub const CARTRIDGE_LENGTH: u16 = CARTRIDGE_END - CARTRIDGE_START + 1;
 
-// TODO: Hardware registers
+pub const SRAM_START :u16 = 0xc800;
+pub const SRAM_END :u16 = 0xcbff;
+pub const SRAM_LENGTH: u16 = SRAM_END - SRAM_START + 1;
 
 pub const MINE_STORM_START: u16 = 0xe000;
 pub const MINE_STORM_END: u16 = 0xefff;
