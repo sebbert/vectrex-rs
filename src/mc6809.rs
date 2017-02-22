@@ -1,6 +1,7 @@
 #![allow(unused_variables, dead_code, unused_assignments)]
 
 use motherboard::Motherboard;
+use std::fmt::{ self, Debug, Formatter };
 
 #[derive(Default)]
 #[allow(dead_code)]
@@ -23,6 +24,35 @@ pub struct Mc6809 {
 	cc_half_carry: bool,
 	cc_firq_mask: bool,
 	cc_entire_flag: bool
+}
+
+impl Debug for Mc6809 {
+	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		fn write_flag(f: &mut Formatter, flag: bool) {
+			write!(f, "{}", if flag {"*"} else {" "});
+		}
+
+		writeln!(f, "DP: {:02x}     A: {:02x}", self.reg_dp(), self.reg_a());
+		writeln!(f, "PC: {:04x}   B: {:02x}", self.reg_pc(), self.reg_b());
+		writeln!(f, " X: {:04x}   D: {:04x}", self.reg_x(), self.reg_d());
+		write!(f, " Y: {:04x}  CC: ", self.reg_y());
+
+		write_flag(f, self.cc_entire_flag);
+		write_flag(f, self.cc_firq_mask);
+		write_flag(f, self.cc_half_carry);
+		write_flag(f, self.cc_irq_mask);
+		write_flag(f, self.cc_negative);
+		write_flag(f, self.cc_zero);
+		write_flag(f, self.cc_overflow);
+		write_flag(f, self.cc_carry);
+
+		writeln!(f, "");
+
+		writeln!(f, " S: {:04x}      EFHINZVC", self.reg_s());
+		let whatever = write!(f, "          ");
+
+		whatever
+	}
 }
 
 macro_rules! invalid_opcode {
