@@ -1,6 +1,5 @@
 #![allow(unused_variables, dead_code, unused_assignments)]
 
-use instruction::*;
 use motherboard::Motherboard;
 
 #[derive(Default)]
