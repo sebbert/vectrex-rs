@@ -80,7 +80,7 @@ impl Mc6809 {
 		let mut cycles: u32 = 0;
 
 		let op = motherboard.read_u8(self.reg_pc);
-		let mut next_pc = self.reg_pc.wrapping_add(1);
+		self.reg_pc = self.reg_pc.wrapping_add(1);
 
 		macro_rules! inherent {
 		    ($f:path, $cycles:expr) => ({
@@ -91,8 +91,8 @@ impl Mc6809 {
 
 		macro_rules! immediate8 {
 			($f:path, $cycles:expr) => ({
-				let addr = next_pc;
-				next_pc = next_pc.wrapping_add(1);
+				let addr = self.reg_pc;
+				self.reg_pc = self.reg_pc.wrapping_add(1);
 				cycles += $cycles;
 				$f(self, motherboard, addr)
 			})
@@ -100,8 +100,8 @@ impl Mc6809 {
 
 		macro_rules! immediate16 {
 			($f:path, $cycles:expr) => ({
-				let addr = next_pc;
-				next_pc = next_pc.wrapping_add(2);
+				let addr = self.reg_pc;
+				self.reg_pc = self.reg_pc.wrapping_add(2);
 				cycles += $cycles;
 				$f(self, motherboard, addr)
 			})
@@ -109,8 +109,9 @@ impl Mc6809 {
 
 		macro_rules! immediate24 {
 			($f:path, $cycles:expr) => ({
-				let addr = next_pc;
-				next_pc = next_pc.wrapping_add(3);
+				let addr = self.reg_pc;
+				self.reg_pc = self.reg_pc.wrapping_add(3);
+
 				cycles += $cycles;
 				$f(self, motherboard, addr)
 			})
@@ -118,9 +119,9 @@ impl Mc6809 {
 
 		macro_rules! direct {
 			($f:path, $cycles:expr) => ({
-				let mut addr = motherboard.read_u8(next_pc) as u16;
+				let mut addr = motherboard.read_u8(self.reg_pc) as u16;
 				addr = addr as u16 | (self.reg_dp as u16) << 8;
-				next_pc = next_pc.wrapping_add(1);
+				self.reg_pc = self.reg_pc.wrapping_add(1);
 				cycles += $cycles;
 				$f(self, motherboard, addr)
 			})
@@ -128,8 +129,8 @@ impl Mc6809 {
 
 		macro_rules! extended {
 			($f:expr, $cycles:expr) => ({
-				let addr = motherboard.read_u16(next_pc);
-				next_pc = next_pc.wrapping_add(2);
+				let addr = motherboard.read_u16(self.reg_pc);
+				self.reg_pc = self.reg_pc.wrapping_add(2);
 				cycles += $cycles;
 				$f(self, motherboard, addr)
 			})
@@ -137,8 +138,8 @@ impl Mc6809 {
 
 		macro_rules! indexed {
 			($f: expr, $cycles:expr) => ({
-				let postbyte = motherboard.read_u8(next_pc);
-				next_pc = next_pc.wrapping_add(1);
+				let postbyte = motherboard.read_u8(self.reg_pc);
+				self.reg_pc = self.reg_pc.wrapping_add(1);
 				cycles += $cycles;
 				panic!("Indexed addressing is not yet implemented");
 			})
@@ -149,8 +150,8 @@ impl Mc6809 {
 
 		match op {
 			PAGE_2 => {
-				let op = motherboard.read_u8(next_pc);
-				next_pc = next_pc.wrapping_add(1);
+				let op = motherboard.read_u8(self.reg_pc);
+				self.reg_pc = self.reg_pc.wrapping_add(1);
 			
 				match op {
 					0x83 => immediate16!(Self::instr_cmpd, 5),
@@ -177,8 +178,8 @@ impl Mc6809 {
 				}
 			},
 			PAGE_3 => {
-				let op = motherboard.read_u8(next_pc);
-				next_pc = next_pc.wrapping_add(1);
+				let op = motherboard.read_u8(self.reg_pc);
+				self.reg_pc = self.reg_pc.wrapping_add(1);
 			
 				match op {
 					0x8c => immediate16!(Self::instr_cmps, 5),
@@ -397,8 +398,6 @@ impl Mc6809 {
 			0x7d => extended!(Self::instr_tst, 7),
 			_ => invalid_opcode!(op)
 		}
-
-		self.reg_pc = next_pc;
 
 		cycles
 	}
