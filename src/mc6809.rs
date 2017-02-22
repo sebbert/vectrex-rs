@@ -452,31 +452,45 @@ impl Mc6809 {
 	}
 
 	fn instr_cmpa(&mut self, mobo: &Motherboard, addr: u16) {
-		panic!("Unimplemented instruction CMPA");
+		let mem = mobo.read_u8(addr);
+		let reg = self.reg_a();
+		self.sub_u8_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmpb(&mut self, mobo: &Motherboard, addr: u16) {
-		panic!("Unimplemented instruction CMPB");
+		let mem = mobo.read_u8(addr);
+		let reg = self.reg_b();
+		self.sub_u8_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmpd(&mut self, mobo: &Motherboard, addr: u16) {
-		panic!("Unimplemented instruction CMPD");
+		let mem = mobo.read_u16(addr);
+		let reg = self.reg_d();
+		self.sub_u16_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmps(&mut self, mobo: &Motherboard, addr: u16) {
-		panic!("Unimplemented instruction CMPS");
+		let mem = mobo.read_u16(addr);
+		let reg = self.reg_s();
+		self.sub_u16_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmpu(&mut self, mobo: &Motherboard, addr: u16) {
-		panic!("Unimplemented instruction CMPU");
+		let mem = mobo.read_u16(addr);
+		let reg = self.reg_u();
+		self.sub_u16_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmpx(&mut self, mobo: &Motherboard, addr: u16) {
-		panic!("Unimplemented instruction CMPX");
+		let mem = mobo.read_u16(addr);
+		let reg = self.reg_x();
+		self.sub_u16_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmpy(&mut self, mobo: &Motherboard, addr: u16) {
-		panic!("Unimplemented instruction CMPY");
+		let mem = mobo.read_u16(addr);
+		let reg = self.reg_y();
+		self.sub_u16_and_set_flags(mem, reg);
 	}
 
 	fn instr_lsra(&mut self, mobo: &Motherboard) {
