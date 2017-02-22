@@ -18,7 +18,7 @@ use instruction::Opcode;
 fn main() {
 	env_logger::init().unwrap();
 
-	let bios = include_bytes!("../roms/minestorm.vec");
+	let bios = include_bytes!("../roms/bios.vec");
 	let bios = Bios::from_bytes(bios).unwrap();
 
 	let cart = include_bytes!("../roms/PolePosition.vec");
