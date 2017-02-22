@@ -689,8 +689,11 @@ impl Mc6809 {
 		panic!("Unimplemented instruction JMP");
 	}
 
-	fn instr_jsr(&mut self, mobo: &Motherboard, addr: u16) {
-		panic!("Unimplemented instruction JSR");
+	fn instr_jsr(&mut self, mobo: &mut Motherboard, addr: u16) {
+		let return_addr = self.reg_pc;
+		self.reg_s -= 2;
+		mobo.write_u16(self.reg_s, return_addr);
+		self.reg_pc = addr;
 	}
 
 	fn instr_lda(&mut self, mobo: &Motherboard, addr: u16) {
