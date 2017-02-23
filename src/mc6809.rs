@@ -35,7 +35,8 @@ impl Debug for Mc6809 {
 		try!(writeln!(f, "DP: {:02x}     A: {:02x}", self.reg_dp(), self.reg_a()));
 		try!(writeln!(f, "PC: {:04x}   B: {:02x}", self.reg_pc(), self.reg_b()));
 		try!(writeln!(f, " X: {:04x}   D: {:04x}", self.reg_x(), self.reg_d()));
-		try!(write!(f, " Y: {:04x}  CC: ", self.reg_y()));
+		try!(writeln!(f, " Y: {:04x}", self.reg_y()));
+		try!(write!  (f, " S: {:04x}  CC:", self.reg_s()));
 
 		try!(write_flag(f, self.cc_entire_flag));
 		try!(write_flag(f, self.cc_firq_mask));
@@ -47,9 +48,7 @@ impl Debug for Mc6809 {
 		try!(write_flag(f, self.cc_carry));
 
 		try!(writeln!(f, ""));
-
-		try!(writeln!(f, " S: {:04x}      EFHINZVC", self.reg_s()));
-		try!(write!(f, "          "));
+		try!(writeln!(f, " U: {:04x}      EFHINZVC", self.reg_u()));
 
 		Ok(())
 	}
