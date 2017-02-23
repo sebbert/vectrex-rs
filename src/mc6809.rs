@@ -134,6 +134,44 @@ impl Mc6809 {
 			})
 		}
 
+		macro_rules! branch8 {
+			($f:path) => ({
+				let should_branch = $f(self);
+
+				cycles += 3;
+
+				self.reg_pc = if should_branch {
+					mobo.read_u8(self.reg_pc) 
+				} else {
+					self.reg_pc.wrapping_add(1)
+				}
+			})
+		}
+
+		macro_rules! branch16 {
+			($f:path, $cycles_if_branch:expr, $cycles_if_no_branch:expr) => ({
+				let should_branch = $f(self);
+
+				self.reg_pc = if should_branch
+				{
+					cycles += $cycles_if_branch;
+					let offset = motherboard.read_u16(self.reg_pc) as i16;
+
+					if offset >= 0 {
+						self.reg_pc.wrapping_add(offset as u16)
+					}
+					else {
+						self.reg_pc.wrapping_sub(-offset as u16)
+					}
+				} else {
+					cycles += $cycles_if_no_branch;	
+					self.reg_pc.wrapping_add(2)
+				}
+			});
+
+			($f:path) => (branch16!($f, 6, 5))
+		}
+
 		const PAGE_2: u8 = 0x10;
 		const PAGE_3: u8 = 0x11;
 
@@ -163,6 +201,19 @@ impl Mc6809 {
 					0xaf => indexed!(Self::instr_sty, 6),
 					0xbf => extended!(Self::instr_sty, 7),
 					0x3f => inherent!(Self::instr_swi2, 20),
+
+
+					// Branch instructions
+					0x27 => branch16!(Self::cond_equal),
+					0x22 => branch16!(Self::cond_unsigned_greater_than),
+					0x24 => branch16!(Self::cond_unsigned_greater_than_or_equal),
+					0x25 => branch16!(Self::cond_unsigned_less_than),
+					0x23 => branch16!(Self::cond_unsigned_less_than_or_equal),
+					0x2c => branch16!(Self::cond_signed_greater_than_or_equal),
+					0x2e => branch16!(Self::cond_signed_greater_than),
+					0x2d => branch16!(Self::cond_signed_less_than),
+					0x2f => branch16!(Self::cond_signed_less_than_or_equal),
+
 					_ => invalid_opcode!(op)
 				}
 			},
@@ -390,6 +441,65 @@ impl Mc6809 {
 
 		cycles
 	}
+
+	// Simple conditionals
+
+	fn cond_always(&self) -> bool { true }
+	fn cond_never(&self) -> bool { false }
+
+	fn cond_equal(&self) -> bool { self.cc_zero }
+	fn cond_not_equal(&self) -> bool { !self.cc_zero }
+
+	fn cond_carry_set(&self) -> bool { self.cc_carry }
+	fn cond_carry_clear(&self) -> bool { !self.cc_carry }
+
+	fn cond_overflow_set(&self) -> bool { self.cc_overflow }
+	fn cond_overflow_clear(&self) -> bool { !self.cc_overflow }
+
+	fn cond_negative(&self) -> bool { self.cc_negative }
+	fn cond_positive(&self) -> bool { !self.cc_negative }
+
+
+	// Signed conditionals
+
+	fn cond_signed_greater_than(&self) -> bool {
+		self.cond_not_equal() && self.cond_signed_greater_than_or_equal()
+	}
+
+	fn cond_signed_greater_than_or_equal(&self) -> bool {
+		self.cc_negative == self.cc_overflow
+	}
+
+	fn cond_signed_less_than(&self) -> bool {
+		self.cc_negative ^ self.cc_overflow
+	}
+
+	fn cond_signed_less_than_or_equal(&self) -> bool {
+		self.cond_equal() || self.cond_signed_less_than()
+	}
+
+
+	// Unsigned conditionals
+
+	fn cond_unsigned_greater_than(&self) -> bool {
+		self.cond_not_equal() && self.cond_unsigned_greater_than_or_equal()
+	}
+
+	fn cond_unsigned_greater_than_or_equal(&self) -> bool {
+		self.cond_carry_clear()
+
+	}
+
+	fn cond_unsigned_less_than(&self) -> bool {
+		self.cond_carry_set()
+	}
+
+	fn cond_unsigned_less_than_or_equal(&self) -> bool {
+		self.cond_equal() || self.cond_unsigned_less_than()
+	}
+
+
+	// Instructions
 
 	fn instr_abx(&mut self, mobo: &Motherboard) {
 		panic!("Unimplemented instruction ABX");
