@@ -28,30 +28,30 @@ pub struct Mc6809 {
 
 impl Debug for Mc6809 {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		fn write_flag(f: &mut Formatter, flag: bool) {
-			write!(f, "{}", if flag {"*"} else {" "});
+		fn write_flag(f: &mut Formatter, flag: bool) -> fmt::Result {
+			write!(f, "{}", if flag {"*"} else {" "})
 		}
 
-		writeln!(f, "DP: {:02x}     A: {:02x}", self.reg_dp(), self.reg_a());
-		writeln!(f, "PC: {:04x}   B: {:02x}", self.reg_pc(), self.reg_b());
-		writeln!(f, " X: {:04x}   D: {:04x}", self.reg_x(), self.reg_d());
-		write!(f, " Y: {:04x}  CC: ", self.reg_y());
+		try!(writeln!(f, "DP: {:02x}     A: {:02x}", self.reg_dp(), self.reg_a()));
+		try!(writeln!(f, "PC: {:04x}   B: {:02x}", self.reg_pc(), self.reg_b()));
+		try!(writeln!(f, " X: {:04x}   D: {:04x}", self.reg_x(), self.reg_d()));
+		try!(write!(f, " Y: {:04x}  CC: ", self.reg_y()));
 
-		write_flag(f, self.cc_entire_flag);
-		write_flag(f, self.cc_firq_mask);
-		write_flag(f, self.cc_half_carry);
-		write_flag(f, self.cc_irq_mask);
-		write_flag(f, self.cc_negative);
-		write_flag(f, self.cc_zero);
-		write_flag(f, self.cc_overflow);
-		write_flag(f, self.cc_carry);
+		try!(write_flag(f, self.cc_entire_flag));
+		try!(write_flag(f, self.cc_firq_mask));
+		try!(write_flag(f, self.cc_half_carry));
+		try!(write_flag(f, self.cc_irq_mask));
+		try!(write_flag(f, self.cc_negative));
+		try!(write_flag(f, self.cc_zero));
+		try!(write_flag(f, self.cc_overflow));
+		try!(write_flag(f, self.cc_carry));
 
-		writeln!(f, "");
+		try!(writeln!(f, ""));
 
-		writeln!(f, " S: {:04x}      EFHINZVC", self.reg_s());
-		let whatever = write!(f, "          ");
+		try!(writeln!(f, " S: {:04x}      EFHINZVC", self.reg_s()));
+		try!(write!(f, "          "));
 
-		whatever
+		Ok(())
 	}
 }
 
