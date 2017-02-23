@@ -830,11 +830,11 @@ impl Mc6809 {
 	}
 
 	fn instr_lda(&mut self, mobo: &Motherboard, addr: u16) {
-		panic!("Unimplemented instruction LDA");
+		self.reg_a = mobo.read_u8(addr);
 	}
 
 	fn instr_ldb(&mut self, mobo: &Motherboard, addr: u16) {
-		panic!("Unimplemented instruction LDB");
+		self.reg_b = mobo.read_u8(addr);
 	}
 
 	fn instr_ldd(&mut self, mobo: &Motherboard, addr: u16) {
