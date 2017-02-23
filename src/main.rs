@@ -28,11 +28,16 @@ fn main() {
 	let mut vectrex = Vectrex::new(bios, cart);
 
 	for _ in 0..20 {
+		let _ = vectrex.step();
+
 		{
-			let op_u16 = vectrex.motherboard().read_u16(vectrex.cpu().reg_pc());
+			let cpu = vectrex.cpu();
+			let pc = cpu.reg_pc();
+			let op_u16 = vectrex.motherboard().read_u16(pc);
 			let opcode = Opcode::from_u16(op_u16);
-			println!("] {:?}", opcode);
+			println!("[0x{:04x}] {:?}", pc, opcode);
+			println!();
+			println!("{:?}", cpu);
 		}
-		vectrex.step();
 	}
 }
