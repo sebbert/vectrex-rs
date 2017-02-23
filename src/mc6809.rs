@@ -1,4 +1,4 @@
-#![allow(unused_variables, dead_code, unused_assignments)]
+#![allow(unused_variables, unused_assignments)]
 
 use motherboard::Motherboard;
 use std::fmt::{ self, Debug, Formatter };
