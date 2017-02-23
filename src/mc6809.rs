@@ -136,12 +136,12 @@ impl Mc6809 {
 
 		macro_rules! branch8 {
 			($f:path) => ({
-				let should_branch = $f(self);
-
 				cycles += 3;
-
+				
+				let should_branch = $f(self);
 				self.reg_pc = if should_branch {
-					mobo.read_u8(self.reg_pc) 
+					let offset = motherboard.read_u8(self.reg_pc) as i8 as i16;
+					offset_address(self.reg_pc, offset)
 				} else {
 					self.reg_pc.wrapping_add(1)
 				}
@@ -156,13 +156,8 @@ impl Mc6809 {
 				{
 					cycles += $cycles_if_branch;
 					let offset = motherboard.read_u16(self.reg_pc) as i16;
-
-					if offset >= 0 {
-						self.reg_pc.wrapping_add(offset as u16)
-					}
-					else {
-						self.reg_pc.wrapping_sub(-offset as u16)
-					}
+					offset_address(self.reg_pc, offset)
+					
 				} else {
 					cycles += $cycles_if_no_branch;	
 					self.reg_pc.wrapping_add(2)
@@ -204,6 +199,9 @@ impl Mc6809 {
 
 
 					// Branch instructions
+
+					0x20 => branch16!(Self::cond_always, 5, 5),
+					0x21 => branch16!(Self::cond_never, 5, 5),
 					0x27 => branch16!(Self::cond_equal),
 					0x22 => branch16!(Self::cond_unsigned_greater_than),
 					0x24 => branch16!(Self::cond_unsigned_greater_than_or_equal),
@@ -213,7 +211,17 @@ impl Mc6809 {
 					0x2e => branch16!(Self::cond_signed_greater_than),
 					0x2d => branch16!(Self::cond_signed_less_than),
 					0x2f => branch16!(Self::cond_signed_less_than_or_equal),
+					0x28 => branch16!(Self::cond_overflow_clear),
+					0x29 => branch16!(Self::cond_overflow_set),
 
+					0x17 => {
+						// Branch to Subroutine
+						cycles += 9;
+						let offset = motherboard.read_u16(self.reg_pc) as i16;
+						self.reg_pc = self.reg_pc.wrapping_add(2);
+						let addr = offset_address(self.reg_pc, offset);
+						self.instr_jsr(motherboard, addr);
+					}
 					_ => invalid_opcode!(op)
 				}
 			},
@@ -234,6 +242,34 @@ impl Mc6809 {
 					_ => invalid_opcode!(op)
 				}
 			},
+
+			// Branch instructions
+
+			0x20 => branch8!(Self::cond_always),
+			0x21 => branch8!(Self::cond_never),
+			0x27 => branch8!(Self::cond_equal),
+			0x22 => branch8!(Self::cond_unsigned_greater_than),
+			0x24 => branch8!(Self::cond_unsigned_greater_than_or_equal),
+			0x25 => branch8!(Self::cond_unsigned_less_than),
+			0x23 => branch8!(Self::cond_unsigned_less_than_or_equal),
+			0x2c => branch8!(Self::cond_signed_greater_than_or_equal),
+			0x2e => branch8!(Self::cond_signed_greater_than),
+			0x2d => branch8!(Self::cond_signed_less_than),
+			0x2f => branch8!(Self::cond_signed_less_than_or_equal),
+			0x28 => branch8!(Self::cond_overflow_clear),
+			0x29 => branch8!(Self::cond_overflow_set),
+
+			0x8d => {
+				// Branch to Subroutine
+				cycles += 9;
+				let offset = motherboard.read_u8(self.reg_pc) as i8 as i16;
+				self.reg_pc = self.reg_pc.wrapping_add(1);
+				let addr = offset_address(self.reg_pc, offset);
+				self.instr_jsr(motherboard, addr);
+			}
+
+			// Regular ordinary swedish instruction time
+
 			0x3a => inherent!(Self::instr_abx, 3),
 			0x89 => immediate8!(Self::instr_adca, 2),
 			0x99 => direct!(Self::instr_adca, 4),
@@ -789,9 +825,7 @@ impl Mc6809 {
 	}
 
 	fn instr_jsr(&mut self, mobo: &mut Motherboard, addr: u16) {
-		let return_addr = self.reg_pc;
-		self.reg_s -= 2;
-		mobo.write_u16(self.reg_s, return_addr);
+		Self::push_u16(&mut self.reg_s, mobo, self.reg_pc);
 		self.reg_pc = addr;
 	}
 
@@ -907,6 +941,32 @@ impl Mc6809 {
 		panic!("Unimplemented instruction TST");
 	}
 
+	fn push_u8(sp: &mut u16, mobo: &mut Motherboard, value: u8) {
+		*sp = sp.checked_sub(1).expect("Stack overflow");
+		mobo.write_u8(*sp, value);
+	}
+
+	fn pop_u8(sp: &mut u16, mobo: &mut Motherboard) -> u8 {
+		let value = mobo.read_u8(*sp);
+		*sp = sp.checked_sub(1).expect("Stack underflow");
+		value
+	}
+
+	fn push_u16(sp: &mut u16, mobo: &mut Motherboard, value: u16) {
+		let hi = (value >> 8) as u8;
+		let lo = value as u8;
+
+		Self::push_u8(sp, mobo, lo);
+		Self::push_u8(sp, mobo, hi);
+	}
+
+	fn pop_u16(sp: &mut u16, mobo: &mut Motherboard) -> u16 {
+		let hi = Self::pop_u8(sp, mobo) as u16;
+		let lo = Self::pop_u8(sp, mobo) as u16;
+
+		(hi << 8) | lo
+	}
+
 	fn sub_u8_and_set_flags(&mut self, a: u8, b: u8) {
 		let (result, carry) = u8::overflowing_sub(a, b);
 		self.cc_carry = carry;
@@ -974,4 +1034,13 @@ impl Mc6809 {
 	pub fn set_reg_u(&mut self, value: u16) { self.reg_u = value }
 	pub fn set_reg_s(&mut self, value: u16) { self.reg_s = value }
 	pub fn set_reg_pc(&mut self, value: u16) { self.reg_pc = value }
+}
+
+fn offset_address(addr: u16, offset: i16) -> u16 {
+	if offset >= 0 {
+		addr.wrapping_add(offset as u16)
+	}
+	else {
+		addr.wrapping_sub(-offset as u16)
+	}
 }
