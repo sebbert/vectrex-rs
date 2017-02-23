@@ -107,16 +107,6 @@ impl Mc6809 {
 			})
 		}
 
-		macro_rules! immediate24 {
-			($f:path, $cycles:expr) => ({
-				let addr = self.reg_pc;
-				self.reg_pc = self.reg_pc.wrapping_add(3);
-
-				cycles += $cycles;
-				$f(self, motherboard, addr)
-			})
-		}
-
 		macro_rules! direct {
 			($f:path, $cycles:expr) => ({
 				let mut addr = motherboard.read_u8(self.reg_pc) as u16;
