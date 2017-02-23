@@ -118,7 +118,7 @@ impl Mc6809 {
 		}
 
 		macro_rules! extended {
-			($f:expr, $cycles:expr) => ({
+			($f:path, $cycles:expr) => ({
 				let addr = motherboard.read_u16(self.reg_pc);
 				self.reg_pc = self.reg_pc.wrapping_add(2);
 				cycles += $cycles;
@@ -127,7 +127,7 @@ impl Mc6809 {
 		}
 
 		macro_rules! indexed {
-			($f: expr, $cycles:expr) => ({
+			($f:path, $cycles:expr) => ({
 				let postbyte = motherboard.read_u8(self.reg_pc);
 				self.reg_pc = self.reg_pc.wrapping_add(1);
 				cycles += $cycles;
