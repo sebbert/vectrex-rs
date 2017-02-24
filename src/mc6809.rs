@@ -2,6 +2,7 @@
 
 use motherboard::Motherboard;
 use std::fmt::{ self, Debug, Formatter };
+use pack::*;
 
 #[derive(Default)]
 #[allow(dead_code)]
@@ -108,8 +109,8 @@ impl Mc6809 {
 
 		macro_rules! direct {
 			($f:path, $cycles:expr) => ({
-				let mut addr = motherboard.read_u8(self.reg_pc) as u16;
-				addr = addr as u16 | (self.reg_dp as u16) << 8;
+				let addr_lo = motherboard.read_u8(self.reg_pc);
+				let addr = pack_u16(self.reg_dp, addr_lo);
 				self.reg_pc = self.reg_pc.wrapping_add(1);
 				cycles += $cycles;
 				$f(self, motherboard, addr)
@@ -953,18 +954,17 @@ impl Mc6809 {
 	}
 
 	fn push_u16(sp: &mut u16, mobo: &mut Motherboard, value: u16) {
-		let hi = (value >> 8) as u8;
-		let lo = value as u8;
+		let (hi, lo) = unpack_u16(value);
 
 		Self::push_u8(sp, mobo, lo);
 		Self::push_u8(sp, mobo, hi);
 	}
 
 	fn pop_u16(sp: &mut u16, mobo: &mut Motherboard) -> u16 {
-		let hi = Self::pop_u8(sp, mobo) as u16;
-		let lo = Self::pop_u8(sp, mobo) as u16;
+		let hi = Self::pop_u8(sp, mobo);
+		let lo = Self::pop_u8(sp, mobo);
 
-		(hi << 8) | lo
+		pack_u16(hi, lo)
 	}
 
 	fn sub_u8_and_set_flags(&mut self, a: u8, b: u8) {
@@ -999,7 +999,7 @@ impl Mc6809 {
 	pub fn reg_b(&self) -> u8 { self.reg_b }
 
 	pub fn reg_d(&self) -> u16 {
-		((self.reg_a as u16) << 8) | self.reg_b as u16
+		pack_u16(self.reg_a, self.reg_b)
 	}
 
 	pub fn reg_dp(&self) -> u8 { self.reg_dp }
@@ -1024,8 +1024,9 @@ impl Mc6809 {
 	pub fn set_reg_a(&mut self, value: u8) { self.reg_a = value }
 	pub fn set_reg_b(&mut self, value: u8) { self.reg_b = value }
 	pub fn set_reg_d(&mut self, value: u16) {
-		self.reg_b = (value >> 8) as u8;
-		self.reg_a = value as u8;
+		let (hi, lo) = unpack_u16(value);
+		self.reg_a = hi;
+		self.reg_b = lo;
 	}
 	pub fn set_reg_dp(&mut self, value: u8) { self.reg_dp = value }
 

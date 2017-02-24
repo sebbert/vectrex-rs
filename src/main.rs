@@ -10,6 +10,7 @@ mod motherboard;
 mod debugger;
 mod mc6809;
 mod vectrex;
+mod pack;
 
 use bios::Bios;
 use cartridge::Cartridge;

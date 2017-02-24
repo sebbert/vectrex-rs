@@ -2,6 +2,7 @@ use mem_map::*;
 use bios::Bios;
 use cartridge::Cartridge;
 use sram::Sram;
+use pack::*;
 
 pub struct Motherboard {
 	bios: Bios,
@@ -40,10 +41,10 @@ impl Motherboard {
 	}
 
 	pub fn read_u16(&self, addr: u16) -> u16 {
-		let hi = self.read_u8(addr) as u16;
-		let lo = self.read_u8(addr+1) as u16;
+		let hi = self.read_u8(addr);
+		let lo = self.read_u8(addr+1);
 
-		(hi << 8) | lo
+		pack_u16(hi, lo)
 	}
 	
 	pub fn write_u8(&mut self, addr: u16, value: u8) {
@@ -62,8 +63,7 @@ impl Motherboard {
 	}
 
 	pub fn write_u16(&mut self, addr: u16, value: u16) {
-		let hi = (value >> 8) as u8;
-		let lo = value as u8;
+		let (hi, lo) = unpack_u16(value);
 
 		self.write_u8(addr, hi);
 		self.write_u8(addr+1, lo);
