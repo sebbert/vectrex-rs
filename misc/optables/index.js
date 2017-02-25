@@ -6,7 +6,7 @@ const log = console.log.bind(console);
 var fs = require("fs");
 var path = require("path");
 var table = fs.readFileSync("table.txt", { encoding: "utf8" });
-var lines = table.split("\r\n");
+var lines = table.split("\n");
 
 var instructions = [];
 
@@ -79,10 +79,53 @@ function parseVariant(lineReader) {
 	};
 }
 
+function parseBranchInstr(reader) {
+	let mnemonic = reader.takeUntil("|").trim();
+	let shortOpcode = reader.takeUntil("|").trim();
+	shortOpcode = parseInt(shortOpcode, 16);
+
+	let longMnemonic = reader.takeUntil("|").trim();
+	let longPage = reader.take() == "!" ? 2 : 1;
+	let longOpcode = reader.takeUntil("|").trim();
+	longOpcode = parseInt(longOpcode, 16);
+	let longBytes = (longPage == 2) ? 4 : 3;
+	let longCycles = 5;
+	if(mnemonic == "BSR") longCycles = 9;
+
+	return {
+		mnemonic: mnemonic,
+		opcodes: {
+			relative8: {
+				opcode: shortOpcode,
+				page: 1,
+				cycles: 3,
+				bytes: 2
+			},
+			relative16: {
+				opcode: longOpcode,
+				page: longPage,
+				cycles: longCycles,
+				bytes: longBytes
+			}
+		}
+	}
+}
+
 lines.forEach(line => {
 	let reader = new Reader(line);
 
-	if(reader.take() !== "|") return;
+	let first = reader.take();
+	if(first === "b") {
+		// Branch instr
+		let second = reader.take();
+		if(second !== "|") return;
+
+		instructions.push(parseBranchInstr(reader));
+		return;
+	}
+	else if(first !== "|") {
+		return;
+	}
 
 	let second = reader.take();
 	if(second == "*" || second == "-") return;
@@ -133,7 +176,7 @@ function pageMatch(pageNumber, page) {
 	next_pc = next_pc.wrapping_add(1);
 
 	match op {
-`.replace("\n", "\r\n");
+`.replace("\n", "\n");
 
 	let postamble =`,
 		_ => invalid_opcode!(op)
@@ -147,7 +190,7 @@ function pageMatch(pageNumber, page) {
 			let op = instr[variant];
 
 			return "\t\t" + makeBranch(instr, variant);
-		}).join(",\r\n")
+		}).join(",\n")
 		+ postamble;
 }
 
@@ -171,22 +214,22 @@ let outStr = instructions.filter(x => x).map(instr => {
 		if(branch) lines.push(branch);
 	}
 
-	return lines.join(",\r\n");
-}).filter(x => x).join(",\r\n");
+	return lines.join(",\n");
+}).filter(x => x).join(",\n");
 
 outStr = [
 	pageMatch(2, page2),
 	pageMatch(3, page3),
 	outStr
-].join(",\r\n");
+].join(",\n");
 
-outStr = "match op {\r\n"
+outStr = "match op {\n"
 	+ outStr
-		.split(/\r\n|\n/)
+		.split(/\n\n/)
 		.map(x => "\t" + x)
-		.join("\r\n")
-	+ ",\r\n\t_ => invalid_opcode!(op)\r\n}"
-	+ "\r\n\r\n";
+		.join("\n")
+	+ ",\n\t_ => invalid_opcode!(op)\n}"
+	+ "\n\n";
 
 outStr += instructions.map(instr => `
 fn instr_${instr.mnemonic.toLowerCase()}(&mut self, mobo: &Motherboard${instr.opcodes.inherent !== undefined ? '' : ", addr: u16"}) {
@@ -196,106 +239,75 @@ fn instr_${instr.mnemonic.toLowerCase()}(&mut self, mobo: &Motherboard${instr.op
 
 fs.writeFileSync("match.rs", outStr);
 
-let instructionsFile = "#[derive(Debug)]\r\npub enum Opcode {\r\n";
+let instructionsFile = "#[derive(Debug)]\npub enum Opcode {\n";
 
 for(let i = 0; i < instructions.length; ++i) {
 	let instr = instructions[i];
 	let camelCaseMnemonic = instr.mnemonic[0].toUpperCase() + instr.mnemonic.toLowerCase().slice(1);
-	instructionsFile += `\t${camelCaseMnemonic},\r\n`;
+	instructionsFile += `\t${camelCaseMnemonic},\n`;
 }
 
-instructionsFile += `}
+instructionsFile += `
 
-enum AddressingMode {
-	Inherent,
-	Immediate,
-	Direct,
-	Extended,
-	Indexed
-}
-
-impl Opcode {
-	pub fn from_u16(op_16: u16) -> Opcode {
-		let hi_op = (op_16 >> 8) as u8;
-		match hi_op {
-			0x10 => {
-				let op = op_16 as u8;
-				match op {
-${buildCases(2, 5)}
-					
-					_ => panic!("Unknown opcode 0x{:02x}", op)
-				}
-			},
-			0x11 => {
-				let op = op_16 as u8;
-
-				match op {
-${buildCases(3, 5)}
-					_ => panic!("Unknown opcode 0x{:02x}", op)
-				}
-			}
-			_ => Self::from_u8(hi_op)
-		}
-	}
-
-	pub fn from_u8(op: u8) -> Opcode {
+match op {
+	0x10 => {
+		pc += 1;
+		let op = mem.read_u8(pc);
 		match op {
-`;
+${buildCases(2, 3)}
+
+			_ => None
+		}
+	},
+	0x11 => {
+		pc += 1;
+		let op = mem.read_u8(pc);
+		match op {
+${buildCases(3, 3)}
+
+			_ => None
+		}
+	},
+${buildCases(1, 1)}
+	_ => None
+}`;
 
 function buildCases(page, indentLevel) {
 	var output = "";
 	for(let i = 0; i < instructions.length; ++i) {
 		let instr = instructions[i];
-		let variants = Object.keys(instr.opcodes).filter(x => {
-			let op = instr.opcodes[x];
-			return op != undefined && op.page == page;
+
+		Object.keys(instr.opcodes).forEach(variant => {
+			let op = instr.opcodes[variant];
+			if(op === undefined || op.page != page) return;
+
+			let camelCaseMnemonic = instr.mnemonic[0].toUpperCase() + instr.mnemonic.toLowerCase().slice(1);
+			let camelCaseVariant = variant[0].toUpperCase() + variant.toLowerCase().slice(1);
+
+			if(variant == "immediate") {
+				let skipBytes = 1 + (contains([2,3], op.page) ? 1 : 0);
+				camelCaseVariant += (op.bytes - skipBytes) * 8;
+			}
+
+			if(variant == "relative8" || variant == "relative8") {
+
+			}
+
+			let indent = "";
+			for(var ind = 0; ind < indentLevel; ++ind) {
+				indent += "\t";
+			}
+			
+			let hexop = "0x" + pad(2, "0", op.opcode.toString(16));
+
+			output += `${indent}${hexop} => Some(Instruction(Mnemonic::${camelCaseMnemonic}, Addressing::${camelCaseVariant})),\n`;
 		});
-		if(variants.length == 0) continue;
-		let camelCaseMnemonic = instr.mnemonic[0].toUpperCase() + instr.mnemonic.toLowerCase().slice(1);
-		let indent = "";
-		for(var ind = 0; ind < indentLevel; ++ind) {
-			indent += "\t";
-		}
 
-		let cases = variants.map((v, i) => {
-			//let variantSuffix = (v == "inherent") ? "" : `_${v.toUpperCase()}`;
-			let hexop = "0x" + pad(2, "0", instr.opcodes[v].opcode.toString(16));
-			let insertNewline = (i+1)%2 == 0;
-
-			return hexop
-			     + ((i == variants.length-1) ? "" : "|")
-			     //+ (insertNewline ? `\r\n${indent}` : "");
-		}).join("");
-
-		let singleVariant = variants.length == 1;
-
-		output += `${indent}${singleVariant?"":""}${cases} => Opcode::${camelCaseMnemonic},\r\n`;
-
-		let nextIsSingleVariant = true;
-		if(i < instructions.length - 1) {
-			let nextInstr = instructions[i+1];
-			let nextVariants = Object.keys(nextInstr.opcodes).filter(x => nextInstr.opcodes[x]);
-			nextIsSingleVariant = nextVariants.length == 1;
-		}
-
-		
 	}
 
 	return output;
 }
 
-instructionsFile += buildCases(1, 3)
-
-instructionsFile += `
-			_ => panic!("Unknown opcode 0x{:02x}", op)
-		}
-	}
-}
-`;
-
-
-instructionsFile = instructionsFile.replace(/\r\n|\n/g, "\r\n");
-
-fs.writeFileSync(path.join(__dirname, "../../src/debugger.rs"), instructionsFile);
+fs.writeFileSync(path.join(__dirname, "debugger.rs"), instructionsFile);
 
 fs.writeFileSync(path.join(__dirname, "../instructions.json"), JSON.stringify(instructions, undefined, "  "))

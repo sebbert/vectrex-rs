@@ -226,3 +226,22 @@
 |*TSTF | | | | |@5D 3/2 2| |
 |*TSTW | | | | |!5D 3/2 2| |
 | TST | | 0D 6/4 2| 6D 6+/5+ 2+| 7D 7/5 3| |--**0-|
+
+
+b| BEQ | 27 | LBEQ |!27 | Equal | Z | M,S,U |
+b| BGE | 2C | LBGE |!2C | Greater Or Equal | N*V + !N*!V | S |
+b| BGT | 2E | LBGT |!2E | Greater Than | N*V*!Z + !N*!V*!Z | S |
+b| BHI | 22 | LBHI |!22 | Higher | !C*!Z | U |
+b| BHS | 24 | LBHS |!24 | Higher Or Same | !C | U,4 |
+b| BLE | 2F | LBLE |!2F | Less Than Or Equal | Z + N*!V + !N*V | S |
+b| BLO | 25 | LBLO |!25 | Lower | C | U,5 |
+b| BLS | 23 | LBLS |!23 | Lower Or Same | C + Z | U |
+b| BLT | 2D | LBLT |!2D | Less Than | N*!V + !N*V | S |
+b| BMI | 2B | LBMI |!2B | Minus (Negative) | N | M |
+b| BNE | 26 | LBNE |!26 | Not Equal | !Z | M,S,U |
+b| BPL | 2A | LBPL |!2A | Plus (Positive) | !N | M |
+b| BRA | 20 | LBRA | 16 | Always | 1 | O,2 |
+b| BRN | 21 | LBRN |!21 | Never | 0 | O |
+b| BSR | 8D | LBSR | 17 | Subroutine | 1 | O,3 |
+b| BVC | 28 | LBVC |!28 | Overflow Clear | !V | M,S |
+b| BVS | 29 | LBVS |!29 | Overflow Set | V | M,S |br 

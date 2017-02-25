@@ -1869,5 +1869,294 @@
         "bytes": 3
       }
     }
+  },
+  {
+    "mnemonic": "BEQ",
+    "opcodes": {
+      "relative8": {
+        "opcode": 39,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 39,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BGE",
+    "opcodes": {
+      "relative8": {
+        "opcode": 44,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 44,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BGT",
+    "opcodes": {
+      "relative8": {
+        "opcode": 46,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 46,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BHI",
+    "opcodes": {
+      "relative8": {
+        "opcode": 34,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 34,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BHS",
+    "opcodes": {
+      "relative8": {
+        "opcode": 36,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 36,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BLE",
+    "opcodes": {
+      "relative8": {
+        "opcode": 47,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 47,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BLO",
+    "opcodes": {
+      "relative8": {
+        "opcode": 37,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 37,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BLS",
+    "opcodes": {
+      "relative8": {
+        "opcode": 35,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 35,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BLT",
+    "opcodes": {
+      "relative8": {
+        "opcode": 45,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 45,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BMI",
+    "opcodes": {
+      "relative8": {
+        "opcode": 43,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 43,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BNE",
+    "opcodes": {
+      "relative8": {
+        "opcode": 38,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 38,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BPL",
+    "opcodes": {
+      "relative8": {
+        "opcode": 42,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 42,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BRA",
+    "opcodes": {
+      "relative8": {
+        "opcode": 32,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 22,
+        "page": 1,
+        "cycles": 5,
+        "bytes": 3
+      }
+    }
+  },
+  {
+    "mnemonic": "BRN",
+    "opcodes": {
+      "relative8": {
+        "opcode": 33,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 33,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BSR",
+    "opcodes": {
+      "relative8": {
+        "opcode": 141,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 23,
+        "page": 1,
+        "cycles": 9,
+        "bytes": 3
+      }
+    }
+  },
+  {
+    "mnemonic": "BVC",
+    "opcodes": {
+      "relative8": {
+        "opcode": 40,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 40,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
+  },
+  {
+    "mnemonic": "BVS",
+    "opcodes": {
+      "relative8": {
+        "opcode": 41,
+        "page": 1,
+        "cycles": 3,
+        "bytes": 2
+      },
+      "relative16": {
+        "opcode": 41,
+        "page": 2,
+        "cycles": 5,
+        "bytes": 4
+      }
+    }
   }
 ]
