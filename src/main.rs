@@ -16,8 +16,7 @@ mod pack;
 use bios::Bios;
 use cartridge::Cartridge;
 use vectrex::Vectrex;
-use debugger::{disassembler, Instruction, Mnemonic, Addressing};
-use memory::Memory;
+use debugger::{disassembler, Instruction};
 
 fn main() {
 	env_logger::init().unwrap();

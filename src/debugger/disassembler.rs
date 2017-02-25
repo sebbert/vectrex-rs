@@ -9,7 +9,7 @@ pub fn parse_instruction(mem: &Memory, addr: u16) -> Option<Instruction> {
 	let op = mem.read_u8(addr);
 
 	match op {
-		0x10 => {
+		PAGE_2 => {
 			pc += 1;
 			let op = mem.read_u8(pc);
 			match op {
@@ -53,7 +53,7 @@ pub fn parse_instruction(mem: &Memory, addr: u16) -> Option<Instruction> {
 				_ => None
 			}
 		},
-		0x11 => {
+		PAGE_3 => {
 			pc += 1;
 			let op = mem.read_u8(pc);
 			match op {
