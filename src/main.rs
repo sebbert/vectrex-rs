@@ -16,7 +16,7 @@ mod pack;
 use bios::Bios;
 use cartridge::Cartridge;
 use vectrex::Vectrex;
-use debugger::Opcode;
+use debugger::{disassembler, Instruction, Mnemonic, Addressing};
 use memory::Memory;
 
 fn main() {
@@ -31,16 +31,17 @@ fn main() {
 	let mut vectrex = Vectrex::new(bios, cart);
 
 	for _ in 0..20 {
-		let _ = vectrex.step();
-
 		{
 			let cpu = vectrex.cpu();
 			let pc = cpu.reg_pc();
-			let op_u16 = vectrex.motherboard().read_u16(pc);
-			let opcode = Opcode::from_u16(op_u16);
-			println!("[0x{:04x}] {:?}", pc, opcode);
-			println!();
+
+			if let Some(Instruction(mnemonic, addressing)) = disassembler::parse_instruction(vectrex.motherboard(), pc) {
+				println!("{:?}\t{:?}\n", mnemonic, addressing);
+			}
+
 			println!("{:?}", cpu);
 		}
+
+		let _ = vectrex.step();
 	}
 }
