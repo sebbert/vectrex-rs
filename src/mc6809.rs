@@ -1,6 +1,6 @@
 #![allow(unused_variables, unused_assignments)]
 
-use motherboard::Motherboard;
+use memory::Memory;
 use std::fmt::{ self, Debug, Formatter };
 use pack::*;
 
@@ -61,31 +61,31 @@ macro_rules! invalid_opcode {
 
 #[allow(dead_code)]
 impl Mc6809 {	
-	pub fn new(motherboard: &Motherboard) -> Mc6809 {
+	pub fn new(mem: &Memory) -> Mc6809 {
 		let mut cpu = Mc6809::default();
 		
 		cpu.cc_irq_mask = true;
 		cpu.cc_firq_mask = true;
 		
-		cpu.reg_pc = motherboard.read_u16(0xfffe);
+		cpu.reg_pc = mem.read_u16(0xfffe);
 
 		cpu
 	}
 
-	pub fn reset(&mut self, motherboard: &Motherboard) {
-		*self = Mc6809::new(motherboard);
+	pub fn reset(&mut self, mem: &Memory) {
+		*self = Mc6809::new(mem);
 	}
 
-	pub fn step(&mut self, motherboard: &mut Motherboard) -> u32 {
+	pub fn step(&mut self, mem: &mut Memory) -> u32 {
 		let mut cycles: u32 = 0;
 
-		let op = motherboard.read_u8(self.reg_pc);
+		let op = mem.read_u8(self.reg_pc);
 		self.reg_pc = self.reg_pc.wrapping_add(1);
 
 		macro_rules! inherent {
 		    ($f:path, $cycles:expr) => ({
 		    	cycles += cycles;
-		    	$f(self, motherboard);
+		    	$f(self, mem);
 		    })
 		}
 
@@ -94,7 +94,7 @@ impl Mc6809 {
 				let addr = self.reg_pc;
 				self.reg_pc = self.reg_pc.wrapping_add(1);
 				cycles += $cycles;
-				$f(self, motherboard, addr)
+				$f(self, mem, addr)
 			})
 		}
 
@@ -103,32 +103,32 @@ impl Mc6809 {
 				let addr = self.reg_pc;
 				self.reg_pc = self.reg_pc.wrapping_add(2);
 				cycles += $cycles;
-				$f(self, motherboard, addr)
+				$f(self, mem, addr)
 			})
 		}
 
 		macro_rules! direct {
 			($f:path, $cycles:expr) => ({
-				let addr_lo = motherboard.read_u8(self.reg_pc);
+				let addr_lo = mem.read_u8(self.reg_pc);
 				let addr = pack_u16(self.reg_dp, addr_lo);
 				self.reg_pc = self.reg_pc.wrapping_add(1);
 				cycles += $cycles;
-				$f(self, motherboard, addr)
+				$f(self, mem, addr)
 			})
 		}
 
 		macro_rules! extended {
 			($f:path, $cycles:expr) => ({
-				let addr = motherboard.read_u16(self.reg_pc);
+				let addr = mem.read_u16(self.reg_pc);
 				self.reg_pc = self.reg_pc.wrapping_add(2);
 				cycles += $cycles;
-				$f(self, motherboard, addr)
+				$f(self, mem, addr)
 			})
 		}
 
 		macro_rules! indexed {
 			($f:path, $cycles:expr) => ({
-				let postbyte = motherboard.read_u8(self.reg_pc);
+				let postbyte = mem.read_u8(self.reg_pc);
 				self.reg_pc = self.reg_pc.wrapping_add(1);
 				cycles += $cycles;
 				panic!("Indexed addressing is not yet implemented");
@@ -141,7 +141,7 @@ impl Mc6809 {
 				
 				let should_branch = $f(self);
 				self.reg_pc = if should_branch {
-					let offset = motherboard.read_u8(self.reg_pc) as i8 as i16;
+					let offset = mem.read_u8(self.reg_pc) as i8 as i16;
 					offset_address(self.reg_pc, offset)
 				} else {
 					self.reg_pc.wrapping_add(1)
@@ -156,7 +156,7 @@ impl Mc6809 {
 				self.reg_pc = if should_branch
 				{
 					cycles += $cycles_if_branch;
-					let offset = motherboard.read_u16(self.reg_pc) as i16;
+					let offset = mem.read_u16(self.reg_pc) as i16;
 					offset_address(self.reg_pc, offset)
 					
 				} else {
@@ -173,7 +173,7 @@ impl Mc6809 {
 
 		match op {
 			PAGE_2 => {
-				let op = motherboard.read_u8(self.reg_pc);
+				let op = mem.read_u8(self.reg_pc);
 				self.reg_pc = self.reg_pc.wrapping_add(1);
 			
 				match op {
@@ -218,16 +218,16 @@ impl Mc6809 {
 					0x17 => {
 						// Branch to Subroutine
 						cycles += 9;
-						let offset = motherboard.read_u16(self.reg_pc) as i16;
+						let offset = mem.read_u16(self.reg_pc) as i16;
 						self.reg_pc = self.reg_pc.wrapping_add(2);
 						let addr = offset_address(self.reg_pc, offset);
-						self.instr_jsr(motherboard, addr);
+						self.instr_jsr(mem, addr);
 					}
 					_ => invalid_opcode!(op)
 				}
 			},
 			PAGE_3 => {
-				let op = motherboard.read_u8(self.reg_pc);
+				let op = mem.read_u8(self.reg_pc);
 				self.reg_pc = self.reg_pc.wrapping_add(1);
 			
 				match op {
@@ -263,10 +263,10 @@ impl Mc6809 {
 			0x8d => {
 				// Branch to Subroutine
 				cycles += 9;
-				let offset = motherboard.read_u8(self.reg_pc) as i8 as i16;
+				let offset = mem.read_u8(self.reg_pc) as i8 as i16;
 				self.reg_pc = self.reg_pc.wrapping_add(1);
 				let addr = offset_address(self.reg_pc, offset);
-				self.instr_jsr(motherboard, addr);
+				self.instr_jsr(mem, addr);
 			}
 
 			// Regular ordinary swedish instruction time
@@ -538,431 +538,431 @@ impl Mc6809 {
 
 	// Instructions
 
-	fn instr_abx(&mut self, mobo: &Motherboard) {
+	fn instr_abx(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction ABX");
 	}
 
-	fn instr_adca(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_adca(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ADCA");
 	}
 
-	fn instr_adcb(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_adcb(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ADCB");
 	}
 
-	fn instr_adda(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_adda(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ADDA");
 	}
 
-	fn instr_addb(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_addb(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ADDB");
 	}
 
-	fn instr_addd(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_addd(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ADDD");
 	}
 
-	fn instr_anda(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_anda(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ANDA");
 	}
 
-	fn instr_andb(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_andb(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ANDB");
 	}
 
-	fn instr_andcc(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_andcc(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ANDCC");
 	}
 
-	fn instr_asla(&mut self, mobo: &Motherboard) {
+	fn instr_asla(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction ASLA");
 	}
 
-	fn instr_aslb(&mut self, mobo: &Motherboard) {
+	fn instr_aslb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction ASLB");
 	}
 
-	fn instr_asl(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_asl(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ASL");
 	}
 
-	fn instr_asra(&mut self, mobo: &Motherboard) {
+	fn instr_asra(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction ASRA");
 	}
 
-	fn instr_asrb(&mut self, mobo: &Motherboard) {
+	fn instr_asrb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction ASRB");
 	}
 
-	fn instr_asr(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_asr(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ASR");
 	}
 
-	fn instr_bita(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_bita(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction BITA");
 	}
 
-	fn instr_bitb(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_bitb(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction BITB");
 	}
 
-	fn instr_clra(&mut self, mobo: &Motherboard) {
+	fn instr_clra(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction CLRA");
 	}
 
-	fn instr_clrb(&mut self, mobo: &Motherboard) {
+	fn instr_clrb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction CLRB");
 	}
 
-	fn instr_clr(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_clr(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction CLR");
 	}
 
-	fn instr_cmpa(&mut self, mobo: &Motherboard, addr: u16) {
-		let mem = mobo.read_u8(addr);
+	fn instr_cmpa(&mut self, mem: &Memory, addr: u16) {
+		let mem = mem.read_u8(addr);
 		let reg = self.reg_a();
 		self.sub_u8_and_set_flags(mem, reg);
 	}
 
-	fn instr_cmpb(&mut self, mobo: &Motherboard, addr: u16) {
-		let mem = mobo.read_u8(addr);
+	fn instr_cmpb(&mut self, mem: &Memory, addr: u16) {
+		let mem = mem.read_u8(addr);
 		let reg = self.reg_b();
 		self.sub_u8_and_set_flags(mem, reg);
 	}
 
-	fn instr_cmpd(&mut self, mobo: &Motherboard, addr: u16) {
-		let mem = mobo.read_u16(addr);
+	fn instr_cmpd(&mut self, mem: &Memory, addr: u16) {
+		let mem = mem.read_u16(addr);
 		let reg = self.reg_d();
 		self.sub_u16_and_set_flags(mem, reg);
 	}
 
-	fn instr_cmps(&mut self, mobo: &Motherboard, addr: u16) {
-		let mem = mobo.read_u16(addr);
+	fn instr_cmps(&mut self, mem: &Memory, addr: u16) {
+		let mem = mem.read_u16(addr);
 		let reg = self.reg_s();
 		self.sub_u16_and_set_flags(mem, reg);
 	}
 
-	fn instr_cmpu(&mut self, mobo: &Motherboard, addr: u16) {
-		let mem = mobo.read_u16(addr);
+	fn instr_cmpu(&mut self, mem: &Memory, addr: u16) {
+		let mem = mem.read_u16(addr);
 		let reg = self.reg_u();
 		self.sub_u16_and_set_flags(mem, reg);
 	}
 
-	fn instr_cmpx(&mut self, mobo: &Motherboard, addr: u16) {
-		let mem = mobo.read_u16(addr);
+	fn instr_cmpx(&mut self, mem: &Memory, addr: u16) {
+		let mem = mem.read_u16(addr);
 		let reg = self.reg_x();
 		self.sub_u16_and_set_flags(mem, reg);
 	}
 
-	fn instr_cmpy(&mut self, mobo: &Motherboard, addr: u16) {
-		let mem = mobo.read_u16(addr);
+	fn instr_cmpy(&mut self, mem: &Memory, addr: u16) {
+		let mem = mem.read_u16(addr);
 		let reg = self.reg_y();
 		self.sub_u16_and_set_flags(mem, reg);
 	}
 
-	fn instr_lsra(&mut self, mobo: &Motherboard) {
+	fn instr_lsra(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction LSRA");
 	}
 
-	fn instr_lsrb(&mut self, mobo: &Motherboard) {
+	fn instr_lsrb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction LSRB");
 	}
 
-	fn instr_lsr(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_lsr(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction LSR");
 	}
 
-	fn instr_mul(&mut self, mobo: &Motherboard) {
+	fn instr_mul(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction MUL");
 	}
 
 
-	fn instr_nega(&mut self, mobo: &Motherboard) {
+	fn instr_nega(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction NEGA");
 	}
 
-	fn instr_negb(&mut self, mobo: &Motherboard) {
+	fn instr_negb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction NEGB");
 	}
 
-	fn instr_neg(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_neg(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction NEG");
 	}
 
-	fn instr_nop(&mut self, mobo: &Motherboard) {
+	fn instr_nop(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction NOP");
 	}
 
-	fn instr_ora(&mut self, mobo: &Motherboard, addr: u16) {
-		self.reg_a |= mobo.read_u8(addr);
+	fn instr_ora(&mut self, mem: &Memory, addr: u16) {
+		self.reg_a |= mem.read_u8(addr);
 	}
 
-	fn instr_orb(&mut self, mobo: &Motherboard, addr: u16) {
-		self.reg_b |= mobo.read_u8(addr);
+	fn instr_orb(&mut self, mem: &Memory, addr: u16) {
+		self.reg_b |= mem.read_u8(addr);
 	}
 
-	fn instr_orcc(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_orcc(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ORCC");
 	}
 
-	fn instr_pshs(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_pshs(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction PSHS");
 	}
 
-	fn instr_pshu(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_pshu(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction PSHU");
 	}
 
-	fn instr_puls(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_puls(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction PULS");
 	}
 
-	fn instr_pulu(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_pulu(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction PULU");
 	}
 
-	fn instr_rola(&mut self, mobo: &Motherboard) {
+	fn instr_rola(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction ROLA");
 	}
 
-	fn instr_rolb(&mut self, mobo: &Motherboard) {
+	fn instr_rolb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction ROLB");
 	}
 
-	fn instr_rol(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_rol(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ROL");
 	}
 
-	fn instr_rora(&mut self, mobo: &Motherboard) {
+	fn instr_rora(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction RORA");
 	}
 
-	fn instr_rorb(&mut self, mobo: &Motherboard) {
+	fn instr_rorb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction RORB");
 	}
 
-	fn instr_ror(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_ror(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction ROR");
 	}
 
-	fn instr_rti(&mut self, mobo: &Motherboard) {
+	fn instr_rti(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction RTI");
 	}
 
-	fn instr_rts(&mut self, mobo: &Motherboard) {
+	fn instr_rts(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction RTS");
 	}
 
-	fn instr_sbca(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_sbca(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction SBCA");
 	}
 
-	fn instr_sbcb(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_sbcb(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction SBCB");
 	}
 
-	fn instr_sex(&mut self, mobo: &Motherboard) {
+	fn instr_sex(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction SEX");
 	}
 
-	fn instr_coma(&mut self, mobo: &Motherboard) {
+	fn instr_coma(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction COMA");
 	}
 
-	fn instr_comb(&mut self, mobo: &Motherboard) {
+	fn instr_comb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction COMB");
 	}
 
-	fn instr_com(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_com(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction COM");
 	}
 
-	fn instr_cwai(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_cwai(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction CWAI");
 	}
 
-	fn instr_daa(&mut self, mobo: &Motherboard) {
+	fn instr_daa(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction DAA");
 	}
 
-	fn instr_deca(&mut self, mobo: &Motherboard) {
+	fn instr_deca(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction DECA");
 	}
 
-	fn instr_decb(&mut self, mobo: &Motherboard) {
+	fn instr_decb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction DECB");
 	}
 
-	fn instr_dec(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_dec(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction DEC");
 	}
 
-	fn instr_eora(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_eora(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction EORA");
 	}
 
-	fn instr_eorb(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_eorb(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction EORB");
 	}
 
-	fn instr_exg(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_exg(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction EXG");
 	}
 
-	fn instr_inca(&mut self, mobo: &Motherboard) {
+	fn instr_inca(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction INCA");
 	}
 
-	fn instr_incb(&mut self, mobo: &Motherboard) {
+	fn instr_incb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction INCB");
 	}
 
-	fn instr_inc(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_inc(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction INC");
 	}
 
-	fn instr_jmp(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_jmp(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction JMP");
 	}
 
-	fn instr_jsr(&mut self, mobo: &mut Motherboard, addr: u16) {
-		Self::push_u16(&mut self.reg_s, mobo, self.reg_pc);
+	fn instr_jsr(&mut self, mem: &mut Memory, addr: u16) {
+		Self::push_u16(&mut self.reg_s, mem, self.reg_pc);
 		self.reg_pc = addr;
 	}
 
-	fn instr_lda(&mut self, mobo: &Motherboard, addr: u16) {
-		self.reg_a = mobo.read_u8(addr);
+	fn instr_lda(&mut self, mem: &Memory, addr: u16) {
+		self.reg_a = mem.read_u8(addr);
 	}
 
-	fn instr_ldb(&mut self, mobo: &Motherboard, addr: u16) {
-		self.reg_b = mobo.read_u8(addr);
+	fn instr_ldb(&mut self, mem: &Memory, addr: u16) {
+		self.reg_b = mem.read_u8(addr);
 	}
 
-	fn instr_ldd(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_ldd(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction LDD");
 	}
 
-	fn instr_lds(&mut self, mobo: &Motherboard, address: u16) {
-		self.reg_s = mobo.read_u16(address)
+	fn instr_lds(&mut self, mem: &Memory, address: u16) {
+		self.reg_s = mem.read_u16(address)
 	}
 
-	fn instr_ldu(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_ldu(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction LDU");
 	}
 
-	fn instr_ldx(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_ldx(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction LDX");
 	}
 
-	fn instr_ldy(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_ldy(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction LDY");
 	}
 
-	fn instr_leas(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_leas(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction LEAS");
 	}
 
-	fn instr_leau(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_leau(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction LEAU");
 	}
 
-	fn instr_leax(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_leax(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction LEAX");
 	}
 
-	fn instr_leay(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_leay(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction LEAY");
 	}
 
-	fn instr_sta(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_sta(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction STA");
 	}
 
-	fn instr_stb(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_stb(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction STB");
 	}
 
-	fn instr_std(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_std(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction STD");
 	}
 
-	fn instr_stu(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_stu(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction STU");
 	}
 
-	fn instr_stx(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_stx(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction STX");
 	}
 
-	fn instr_sty(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_sty(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction STY");
 	}
 
-	fn instr_suba(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_suba(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction SUBA");
 	}
 
-	fn instr_subb(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_subb(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction SUBB");
 	}
 
-	fn instr_subd(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_subd(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction SUBD");
 	}
 
-	fn instr_swi(&mut self, mobo: &Motherboard) {
+	fn instr_swi(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction SWI");
 	}
 
-	fn instr_swi2(&mut self, mobo: &Motherboard) {
+	fn instr_swi2(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction SWI2");
 	}
 
-	fn instr_swi3(&mut self, mobo: &Motherboard) {
+	fn instr_swi3(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction SWI3");
 	}
 
-	fn instr_sync(&mut self, mobo: &Motherboard) {
+	fn instr_sync(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction SYNC");
 	}
 
-	fn instr_tfr1(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_tfr1(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction TFR1");
 	}
 
-	fn instr_tsta(&mut self, mobo: &Motherboard) {
+	fn instr_tsta(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction TSTA");
 	}
 
-	fn instr_tstb(&mut self, mobo: &Motherboard) {
+	fn instr_tstb(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction TSTB");
 	}
 
-	fn instr_tst(&mut self, mobo: &Motherboard, addr: u16) {
+	fn instr_tst(&mut self, mem: &Memory, addr: u16) {
 		panic!("Unimplemented instruction TST");
 	}
 
-	fn push_u8(sp: &mut u16, mobo: &mut Motherboard, value: u8) {
+	fn push_u8(sp: &mut u16, mem: &mut Memory, value: u8) {
 		*sp = sp.checked_sub(1).expect("Stack overflow");
-		mobo.write_u8(*sp, value);
+		mem.write_u8(*sp, value);
 	}
 
-	fn pop_u8(sp: &mut u16, mobo: &mut Motherboard) -> u8 {
-		let value = mobo.read_u8(*sp);
+	fn pop_u8(sp: &mut u16, mem: &mut Memory) -> u8 {
+		let value = mem.read_u8(*sp);
 		*sp = sp.checked_sub(1).expect("Stack underflow");
 		value
 	}
 
-	fn push_u16(sp: &mut u16, mobo: &mut Motherboard, value: u16) {
+	fn push_u16(sp: &mut u16, mem: &mut Memory, value: u16) {
 		let (hi, lo) = unpack_u16(value);
 
-		Self::push_u8(sp, mobo, lo);
-		Self::push_u8(sp, mobo, hi);
+		Self::push_u8(sp, mem, lo);
+		Self::push_u8(sp, mem, hi);
 	}
 
-	fn pop_u16(sp: &mut u16, mobo: &mut Motherboard) -> u16 {
-		let hi = Self::pop_u8(sp, mobo);
-		let lo = Self::pop_u8(sp, mobo);
+	fn pop_u16(sp: &mut u16, mem: &mut Memory) -> u16 {
+		let hi = Self::pop_u8(sp, mem);
+		let lo = Self::pop_u8(sp, mem);
 
 		pack_u16(hi, lo)
 	}

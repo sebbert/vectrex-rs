@@ -6,6 +6,7 @@ mod cartridge;
 mod bios;
 mod sram;
 mod mem_map;
+mod memory;
 mod motherboard;
 mod debugger;
 mod mc6809;
@@ -16,6 +17,7 @@ use bios::Bios;
 use cartridge::Cartridge;
 use vectrex::Vectrex;
 use debugger::Opcode;
+use memory::Memory;
 
 fn main() {
 	env_logger::init().unwrap();
