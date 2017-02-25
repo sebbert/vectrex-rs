@@ -112,7 +112,6 @@ pub enum Mnemonic {
 	Tsta,
 	Tstb,
 	Tst,
-	Bcs,
 	Beq,
 	Bge,
 	Bgt,
