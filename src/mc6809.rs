@@ -466,7 +466,7 @@ impl Mc6809 {
 			0xb3 => extended!(Self::instr_subd, 7),
 			0x3f => inherent!(Self::instr_swi, 19),
 			0x13 => inherent!(Self::instr_sync, 2),
-			0x1f => immediate8!(Self::instr_tfr1, 6),
+			0x1f => immediate8!(Self::instr_tfr, 6),
 			0x4d => inherent!(Self::instr_tsta, 2),
 			0x5d => inherent!(Self::instr_tstb, 2),
 			0x0d => direct!(Self::instr_tst, 6),
@@ -925,8 +925,8 @@ impl Mc6809 {
 		panic!("Unimplemented instruction SYNC");
 	}
 
-	fn instr_tfr1(&mut self, mem: &Memory, addr: u16) {
-		panic!("Unimplemented instruction TFR1");
+	fn instr_tfr(&mut self, mem: &Memory, addr: u16) {
+		panic!("Unimplemented instruction TFR");
 	}
 
 	fn instr_tsta(&mut self, mem: &Memory) {
