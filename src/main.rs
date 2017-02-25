@@ -34,8 +34,8 @@ fn main() {
 			let cpu = vectrex.cpu();
 			let pc = cpu.reg_pc();
 
-			if let Some(Instruction(mnemonic, addressing)) = disassembler::parse_instruction(vectrex.motherboard(), pc) {
-				println!("{:?}\t{:?}\n", mnemonic, addressing);
+			if let Some(instr) = disassembler::parse_instruction(vectrex.motherboard(), pc) {
+				println!("{}\n", instr);
 			}
 
 			println!("{:?}", cpu);
