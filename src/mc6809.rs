@@ -201,7 +201,6 @@ impl Mc6809 {
 
 					// Branch instructions
 
-					0x20 => branch16!(Self::cond_always, 5, 5),
 					0x21 => branch16!(Self::cond_never, 5, 5),
 					0x27 => branch16!(Self::cond_equal),
 					0x22 => branch16!(Self::cond_unsigned_greater_than),
@@ -215,14 +214,6 @@ impl Mc6809 {
 					0x28 => branch16!(Self::cond_overflow_clear),
 					0x29 => branch16!(Self::cond_overflow_set),
 
-					0x17 => {
-						// Branch to Subroutine
-						cycles += 9;
-						let offset = mem.read_u16(self.reg_pc) as i16;
-						self.reg_pc = self.reg_pc.wrapping_add(2);
-						let addr = offset_address(self.reg_pc, offset);
-						self.instr_jsr(mem, addr);
-					}
 					_ => invalid_opcode!(op)
 				}
 			},
@@ -259,13 +250,21 @@ impl Mc6809 {
 			0x2f => branch8!(Self::cond_signed_less_than_or_equal),
 			0x28 => branch8!(Self::cond_overflow_clear),
 			0x29 => branch8!(Self::cond_overflow_set),
+			0x16 => branch16!(Self::cond_always, 5, 5),
 
-			0x8d => {
-				// Branch to Subroutine
+			0x8d | 0x17 => { // BSR and LBSR, respectively
 				cycles += 9;
-				let offset = mem.read_u8(self.reg_pc) as i8 as i16;
-				self.reg_pc = self.reg_pc.wrapping_add(1);
-				let addr = offset_address(self.reg_pc, offset);
+
+				let (imm_size, addr_offset) = if op == 0x8d {
+					(1, mem.read_u8(self.reg_pc) as i8 as i16)
+				} else {
+					(2, mem.read_u16(self.reg_pc) as i16)
+				};
+
+				self.reg_pc = self.reg_pc.wrapping_add(imm_size);
+
+				let addr = offset_address(self.reg_pc, addr_offset);
+
 				self.instr_jsr(mem, addr);
 			}
 
