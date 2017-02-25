@@ -33,6 +33,10 @@ fn extended(mem: &Memory, addr: u16) -> Addressing {
 	Addressing::Extended(mem.read_u16(addr))
 }
 
+fn indexed(mem: &Memory, addr: u16) -> Addressing {
+	Addressing::Indexed(parse_indexed(mem, addr))
+}
+
 fn parse_indexed(mem: &Memory, addr: u16) -> IndexMode {
 	let postbyte = mem.read_u8(addr);
 	let addr = addr.wrapping_add(1);
@@ -102,21 +106,18 @@ fn parse_indexed(mem: &Memory, addr: u16) -> IndexMode {
 	}
 }
 
-fn indexed(mem: &Memory, addr: u16) -> Addressing {
-	Addressing::Indexed(parse_indexed(mem, addr))
-}
-
 pub fn parse_instruction(mem: &Memory, addr: u16) -> Option<Instruction> {
 	const PAGE_2: u8 = 0x10;
 	const PAGE_3: u8 = 0x11;
 
-	let mut pc = addr;
 	let op = mem.read_u8(addr);
+	let pc = addr.wrapping_add(1);
 	
 	match op {
 		PAGE_2 => {
-			pc += 1;
 			let op = mem.read_u8(pc);
+			let pc = pc.wrapping_add(1);
+			
 			match op {
 				0x83 => instr(Mnemonic::Cmpd, immediate16(mem, pc)),
 				0x93 => instr(Mnemonic::Cmpd, direct(mem, pc)),
@@ -158,8 +159,9 @@ pub fn parse_instruction(mem: &Memory, addr: u16) -> Option<Instruction> {
 			}
 		},
 		PAGE_3 => {
-			pc += 1;
 			let op = mem.read_u8(pc);
+			let pc = pc.wrapping_add(1);
+
 			match op {
 				0x8c => instr(Mnemonic::Cmps, immediate16(mem, pc)),
 				0x9c => instr(Mnemonic::Cmps, direct(mem, pc)),
