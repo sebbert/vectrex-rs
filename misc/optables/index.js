@@ -250,7 +250,7 @@ for(let i = 0; i < instructions.length; ++i) {
 instructionsFile += `
 
 match op {
-	0x10 => {
+	PAGE_2 => {
 		pc += 1;
 		let op = mem.read_u8(pc);
 		match op {
@@ -259,7 +259,7 @@ ${buildCases(2, 3)}
 			_ => None
 		}
 	},
-	0x11 => {
+	PAGE_3 => {
 		pc += 1;
 		let op = mem.read_u8(pc);
 		match op {
@@ -282,15 +282,17 @@ function buildCases(page, indentLevel) {
 			if(op === undefined || op.page != page) return;
 
 			let camelCaseMnemonic = instr.mnemonic[0].toUpperCase() + instr.mnemonic.toLowerCase().slice(1);
-			let camelCaseVariant = variant[0].toUpperCase() + variant.toLowerCase().slice(1);
+			let addressing = variant;
 
 			if(variant == "immediate") {
 				let skipBytes = 1 + (contains([2,3], op.page) ? 1 : 0);
-				camelCaseVariant += (op.bytes - skipBytes) * 8;
+				addressing += (op.bytes - skipBytes) * 8;
 			}
 
-			if(variant == "relative8" || variant == "relative8") {
-
+			if(addressing == "inherent") {
+				addressing += "()";
+			} else {
+				addressing += "(mem, pc)"
 			}
 
 			let indent = "";
@@ -300,7 +302,7 @@ function buildCases(page, indentLevel) {
 			
 			let hexop = "0x" + pad(2, "0", op.opcode.toString(16));
 
-			output += `${indent}${hexop} => Some(Instruction(Mnemonic::${camelCaseMnemonic}, Addressing::${camelCaseVariant})),\n`;
+			output += `${indent}${hexop} => instr(Mnemonic::${camelCaseMnemonic}, ${addressing}),\n`;
 		});
 
 	}

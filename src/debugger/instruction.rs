@@ -4,13 +4,51 @@ pub struct Instruction(pub Mnemonic, pub Addressing);
 #[derive(Debug)]
 pub enum Addressing {
 	Inherent,
-	Immediate8,
-	Immediate16,
-	Relative8,
-	Relative16,
-	Direct,
-	Extended,
-	Indexed,
+	Immediate8(u8),
+	Immediate16(u16),
+	Relative8(i8),
+	Relative16(i16),
+	Direct(u8),
+	Extended(u16),
+	Indexed(IndexMode),
+}
+
+#[derive(Debug)]
+pub enum IndexRegister {
+	X = 0,
+	Y = 1,
+	U = 2,
+	S = 3
+}
+
+impl From<u8> for IndexRegister {
+	fn from(value: u8) -> IndexRegister {
+		match value {
+			0 => IndexRegister::X,
+			1 => IndexRegister::Y,
+			2 => IndexRegister::U,
+			3 => IndexRegister::S,
+			_ => panic!("Invalid index register, parser is probably broken")
+		}
+	}
+}
+
+#[derive(Debug)]
+pub enum IndexMode {
+	Offset0    { reg: IndexRegister, indirect: bool },
+	Offset5    { reg: IndexRegister, offset: i8 },
+	Offset8    { reg: IndexRegister, offset: i8, indirect: bool },
+	Offset16   { reg: IndexRegister, offset: i16, indirect: bool },
+	OffsetA    { reg: IndexRegister, indirect: bool },
+	OffsetB    { reg: IndexRegister, indirect: bool },
+	OffsetD    { reg: IndexRegister, indirect: bool },
+	Increment1 { reg: IndexRegister },
+	Increment2 { reg: IndexRegister, indirect: bool },
+	Decrement1 { reg: IndexRegister },
+	Decrement2 { reg: IndexRegister, indirect: bool },
+	PcOffset8  { reg: IndexRegister, offset: i8, indirect: bool },
+	PcOffset16 { reg: IndexRegister, offset: i16, indirect: bool },
+	ExtendedIndirect { address: u16 }
 }
 
 #[derive(Debug)]
