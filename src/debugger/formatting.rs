@@ -38,8 +38,49 @@ impl Display for IndexMode {
 			&IndexMode::Offset0 {ref reg, ref indirect} => fmt_indirect(f, *indirect, |f| {
 				write!(f, ", {}", reg)
 			}),
+
 			&IndexMode::Offset5 {ref reg, ref offset} => write!(f, "${:02x}, {}", offset, reg),
-			_ => write!(f, "????")
+
+			&IndexMode::Offset8 {ref reg, ref offset, ref indirect} => fmt_indirect(f, *indirect, |f| {
+				write!(f, "${:02x}, {}", offset, reg)
+			}),
+
+			&IndexMode::Offset16 {ref reg, ref offset, ref indirect} => fmt_indirect(f, *indirect, |f| {
+				write!(f, "${:04x}, {}", offset, reg)
+			}),
+
+			&IndexMode::OffsetA {ref reg, ref indirect} => fmt_indirect(f, *indirect, |f| {
+				write!(f, "A, {}", reg)
+			}),
+
+			&IndexMode::OffsetB {ref reg, ref indirect} => fmt_indirect(f, *indirect, |f| {
+				write!(f, "B, {}", reg)
+			}),
+
+			&IndexMode::OffsetD {ref reg, ref indirect} => fmt_indirect(f, *indirect, |f| {
+				write!(f, "D, {}", reg)
+			}),
+
+			&IndexMode::Increment1 {ref reg} => write!(f, ", {}+", reg),
+			&IndexMode::Decrement1 {ref reg} => write!(f, ", {}-", reg),
+
+			&IndexMode::Increment2 {ref reg, ref indirect} => fmt_indirect(f, *indirect, |f| {
+				write!(f, ", {}++", reg)
+			}),
+
+			&IndexMode::Decrement2 {ref reg, ref indirect} => fmt_indirect(f, *indirect, |f| {
+				write!(f, ", {}--", reg)
+			}),
+
+			&IndexMode::PcOffset8 {ref offset, ref indirect} => fmt_indirect(f, *indirect, |f| {
+				write!(f, "{:02x}, PCR", offset)
+			}),
+
+			&IndexMode::PcOffset16 {ref offset, ref indirect} => fmt_indirect(f, *indirect, |f| {
+				write!(f, "{:04x}, PCR", offset)
+			}),
+
+			&IndexMode::ExtendedIndirect {ref address} => write!(f, "[{:04x}]", address)
 		}
 	}
 }
