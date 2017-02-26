@@ -46,8 +46,8 @@ pub enum IndexMode {
 	Increment2 { reg: IndexRegister, indirect: bool },
 	Decrement1 { reg: IndexRegister },
 	Decrement2 { reg: IndexRegister, indirect: bool },
-	PcOffset8  { reg: IndexRegister, offset: i8, indirect: bool },
-	PcOffset16 { reg: IndexRegister, offset: i16, indirect: bool },
+	PcOffset8  { offset: i8, indirect: bool },
+	PcOffset16 { offset: i16, indirect: bool },
 	ExtendedIndirect { address: u16 }
 }
 

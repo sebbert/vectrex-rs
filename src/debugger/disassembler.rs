@@ -147,12 +147,10 @@ impl<'a> InstructionParser<'a> {
 			},
 
 			0b1100 => IndexMode::PcOffset8 {
-				reg: reg,
 				offset: self.take_u8() as i8,
 				indirect: indirect
 			},
 			0b1101 => IndexMode::PcOffset16 {
-				reg: reg,
 				offset: self.take_u16() as i16,
 				indirect: indirect
 			},
