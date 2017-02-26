@@ -17,6 +17,7 @@ use bios::Bios;
 use cartridge::Cartridge;
 use vectrex::Vectrex;
 use debugger::{disassembler, Instruction};
+use debugger::disassembler::parse_instruction;
 
 fn main() {
 	env_logger::init().unwrap();
@@ -34,9 +35,9 @@ fn main() {
 			let cpu = vectrex.cpu();
 			let pc = cpu.reg_pc();
 
-			if let Some(instr) = disassembler::parse_instruction(vectrex.motherboard(), pc) {
-				println!("{}\n", instr);
-			}
+			let (_, instr) = disassembler::parse_instruction(vectrex.motherboard(), pc);
+
+			println!("{}", instr);
 
 			println!("{:?}", cpu);
 		}

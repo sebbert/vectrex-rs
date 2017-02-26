@@ -1,3 +1,5 @@
+mod tests;
+
 pub mod instruction;
 pub mod disassembler;
 pub mod formatting;
