@@ -804,10 +804,6 @@ impl Mc6809 {
 		panic!("Unimplemented instruction EORB");
 	}
 
-	fn instr_exg(&mut self, mem: &Memory, addr: u16) {
-		panic!("Unimplemented instruction EXG");
-	}
-
 	fn instr_inca(&mut self, mem: &Memory) {
 		panic!("Unimplemented instruction INCA");
 	}
@@ -925,8 +921,108 @@ impl Mc6809 {
 		panic!("Unimplemented instruction SYNC");
 	}
 
+	fn get_tfr_reg_u8(&self, reg: u8) -> u8 {
+		match reg {
+			0b1000 => self.reg_a(),
+			0b1001 => self.reg_b(),
+			0b1010 => self.reg_cc(),
+			0b1011 => self.reg_dp(),
+			_ => panic!("Invalid transfer reg {:04b}", reg)
+		}
+	}
+
+	fn set_tfr_reg_u8(&mut self, reg: u8, value: u8) {
+		match reg {
+			0b1000 => self.set_reg_a(value),
+			0b1001 => self.set_reg_b(value),
+			0b1010 => self.set_reg_cc(value),
+			0b1011 => self.set_reg_dp(value),
+			_ => panic!("Invalid transfer reg {:04b}", reg)
+		}
+	}
+
+	fn get_tfr_reg_u16(&self, reg: u8) -> u16 {
+		match reg {
+			0b0000 => self.reg_d(),
+			0b0001 => self.reg_x(),
+			0b0010 => self.reg_y(),
+			0b0011 => self.reg_u(),
+			0b0100 => self.reg_s(),
+			0b0101 => self.reg_pc(),
+			_ => panic!("Invalid transfer reg {:04b}", reg)
+		}
+	}
+
+	fn set_tfr_reg_u16(&mut self, reg: u8, value: u16) {
+		match reg {
+			0b0000 => self.set_reg_d(value),
+			0b0001 => self.set_reg_x(value),
+			0b0010 => self.set_reg_y(value),
+			0b0011 => self.set_reg_u(value),
+			0b0100 => self.set_reg_s(value),
+			0b0101 => self.set_reg_pc(value),
+			_ => panic!("Invalid transfer reg {:04b}", reg)
+		}
+	}
+
+	fn is_tfr_reg_16(reg: u8) -> bool {
+		(reg & 0b1000) >> 3 == 0
+	}
+
 	fn instr_tfr(&mut self, mem: &Memory, addr: u16) {
-		panic!("Unimplemented instruction TFR");
+		let postbyte = mem.read_u8(addr);
+
+		let src_reg = postbyte >> 4;
+		let dst_reg = postbyte & 0b1111;
+
+		let is_dst_u16 = Self::is_tfr_reg_16(dst_reg);
+		let is_src_u16 = Self::is_tfr_reg_16(src_reg);
+
+		if is_dst_u16 != is_src_u16 {
+			warn!("Attempted TFR between registers of different size, ignoring");
+			return;
+		}
+
+		match is_dst_u16 {
+			true => {
+				let src_value = self.get_tfr_reg_u16(src_reg);
+				self.set_tfr_reg_u16(dst_reg, src_value);
+			},
+			false => {
+				let src_value = self.get_tfr_reg_u8(src_reg);
+				self.set_tfr_reg_u8(dst_reg, src_value);
+			}
+		}
+	}
+
+	fn instr_exg(&mut self, mem: &Memory, addr: u16) {
+		let postbyte = mem.read_u8(addr);
+
+		let reg1 = postbyte >> 4;
+		let reg2 = postbyte & 0b1111;
+
+		let is_reg1_u16 = Self::is_tfr_reg_16(reg1);
+		let is_reg2_u16 = Self::is_tfr_reg_16(reg2);
+
+		if is_reg1_u16 != is_reg2_u16 {
+			warn!("Attempted EXG between registers of different size, ignoring");
+			return;
+		}
+
+		match is_reg1_u16 {
+			true => {
+				let reg1_value = self.get_tfr_reg_u16(reg1);
+				let reg2_value = self.get_tfr_reg_u16(reg2);
+				self.set_tfr_reg_u16(reg1, reg2_value);
+				self.set_tfr_reg_u16(reg2, reg1_value);
+			},
+			false => {
+				let reg1_value = self.get_tfr_reg_u8(reg1);
+				let reg2_value = self.get_tfr_reg_u8(reg2);
+				self.set_tfr_reg_u8(reg1, reg2_value);
+				self.set_tfr_reg_u8(reg2, reg1_value);
+			}
+		}
 	}
 
 	fn instr_tsta(&mut self, mem: &Memory) {
@@ -1018,6 +1114,21 @@ impl Mc6809 {
 		| (self.cc_half_carry as u8) << 5
 		| (self.cc_firq_mask as u8) << 6
 		| (self.cc_entire_flag as u8) << 7
+	}
+
+	pub fn set_reg_cc(&mut self, value: u8) {
+		fn unpack_flag(value: u8, bit_index: u8) -> bool {
+			1 == (value >> bit_index) & 1
+		}
+
+		self.cc_carry       = unpack_flag(value, 0);
+		self.cc_overflow    = unpack_flag(value, 1);
+		self.cc_zero        = unpack_flag(value, 2);
+		self.cc_negative    = unpack_flag(value, 3);
+		self.cc_irq_mask    = unpack_flag(value, 4);
+		self.cc_half_carry  = unpack_flag(value, 5);
+		self.cc_firq_mask   = unpack_flag(value, 6);
+		self.cc_entire_flag = unpack_flag(value, 7);
 	}
 
 	pub fn set_reg_a(&mut self, value: u8) { self.reg_a = value }
