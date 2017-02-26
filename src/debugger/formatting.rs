@@ -11,7 +11,7 @@ impl Display for Mnemonic {
 	}
 }
 
-impl Display for IndexRegister {
+impl Display for Register {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		write!(f, "{:?}", self)
 	}

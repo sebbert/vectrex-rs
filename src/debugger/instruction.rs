@@ -14,20 +14,26 @@ pub enum Addressing {
 }
 
 #[derive(Debug)]
-pub enum IndexRegister {
-	X = 0,
-	Y = 1,
-	U = 2,
-	S = 3
+pub enum Register {
+	D,
+	X,
+	Y,
+	U,
+	S,
+	Pc,
+	A,
+	B,
+	Cc,
+	Dp
 }
 
-impl From<u8> for IndexRegister {
-	fn from(value: u8) -> IndexRegister {
-		match value {
-			0 => IndexRegister::X,
-			1 => IndexRegister::Y,
-			2 => IndexRegister::U,
-			3 => IndexRegister::S,
+impl Register {
+	pub fn from_indexed_halfnibble(halfnibble: u8) -> Register {
+		match halfnibble {
+			0b00 => Register::X,
+			0b01 => Register::Y,
+			0b10 => Register::U,
+			0b11 => Register::S,
 			_ => panic!("Invalid index register, parser is probably broken")
 		}
 	}
@@ -35,18 +41,18 @@ impl From<u8> for IndexRegister {
 
 #[derive(Debug)]
 pub enum IndexMode {
-	Offset0    { reg: IndexRegister, indirect: bool },
-	Offset5    { reg: IndexRegister, offset: i8 },
-	Offset8    { reg: IndexRegister, offset: i8, indirect: bool },
-	Offset16   { reg: IndexRegister, offset: i16, indirect: bool },
-	OffsetA    { reg: IndexRegister, indirect: bool },
-	OffsetB    { reg: IndexRegister, indirect: bool },
-	OffsetD    { reg: IndexRegister, indirect: bool },
-	Increment1 { reg: IndexRegister },
-	Increment2 { reg: IndexRegister, indirect: bool },
-	Decrement1 { reg: IndexRegister },
-	Decrement2 { reg: IndexRegister, indirect: bool },
-	PcOffset8  { offset: i8, indirect: bool },
+	Offset0 { reg: Register, indirect: bool },
+	Offset5 { reg: Register, offset: i8 },
+	Offset8 { reg: Register, offset: i8, indirect: bool },
+	Offset16 { reg: Register, offset: i16, indirect: bool },
+	OffsetA { reg: Register, indirect: bool },
+	OffsetB { reg: Register, indirect: bool },
+	OffsetD { reg: Register, indirect: bool },
+	Increment1 { reg: Register },
+	Increment2 { reg: Register, indirect: bool },
+	Decrement1 { reg: Register },
+	Decrement2 { reg: Register, indirect: bool },
+	PcOffset8 { offset: i8, indirect: bool },
 	PcOffset16 { offset: i16, indirect: bool },
 	ExtendedIndirect { address: u16 }
 }

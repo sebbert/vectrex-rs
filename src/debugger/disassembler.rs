@@ -1,7 +1,7 @@
 use std::fmt::{self, Display, Formatter};
 use pack::unpack_u16;
 use memory::Memory;
-use super::instruction::{Instruction, Mnemonic, Addressing, IndexMode, IndexRegister};
+use super::instruction::{Instruction, Mnemonic, Addressing, IndexMode, Register};
 
 pub struct DisassembledInstruction {
 	pub instruction: Option<Instruction>,
@@ -101,7 +101,7 @@ impl<'a> InstructionParser<'a> {
 		let postbyte = self.take_u8();
 
 		let reg_nibble = (postbyte & 0b0110_0000) >> 5;
-		let reg = IndexRegister::from(reg_nibble);
+		let reg = Register::from_indexed_halfnibble(reg_nibble);
 
 		if postbyte >> 7 == 0 {
 			// The postbyte itself contains a 5-bit offset
