@@ -28,6 +28,22 @@ pub enum Register {
 }
 
 impl Register {
+	pub fn from_tfr_exg_nibble(nibble: u8) -> Option<Register> {
+		match nibble {
+			0b1000 => Some(Register::D),
+			0b1001 => Some(Register::X),
+			0b1010 => Some(Register::Y),
+			0b1011 => Some(Register::U),
+			0b0000 => Some(Register::S),
+			0b0001 => Some(Register::Pc),
+			0b0010 => Some(Register::A),
+			0b0011 => Some(Register::B),
+			0b0100 => Some(Register::Cc),
+			0b0101 => Some(Register::Dp),
+			_ => None
+		}
+	}
+
 	pub fn from_indexed_halfnibble(halfnibble: u8) -> Option<Register> {
 		match halfnibble {
 			0b00 => Some(Register::X),
