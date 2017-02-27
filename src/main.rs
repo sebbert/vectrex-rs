@@ -12,11 +12,16 @@ mod disassembler;
 mod mc6809;
 mod vectrex;
 mod pack;
+mod debugger;
 
 use bios::Bios;
 use cartridge::Cartridge;
 use vectrex::Vectrex;
-use disassembler::parse_instruction;
+use debugger::Debugger;
+
+use std::thread;
+use std::sync::mpsc;
+use std::io::stdin;
 
 fn main() {
 	env_logger::init().unwrap();
@@ -27,20 +32,21 @@ fn main() {
 	let cart = include_bytes!("../roms/PolePosition.vec");
 	let cart = Cartridge::from_bytes(cart).ok();
 
-	let mut vectrex = Vectrex::new(bios, cart);
+	let vectrex = Vectrex::new(bios, cart);
 
-	for _ in 0..20 {
-		{
-			let cpu = vectrex.cpu();
-			let pc = cpu.reg_pc();
+	let (cmd_sender, cmd_reciever) = mpsc::channel();
 
-			let (_, instr) = parse_instruction(vectrex.motherboard(), pc);
+	let debugger = Debugger::new(vectrex, cmd_reciever);
 
-			println!("{}", instr);
+	let _ = thread::spawn(move || {
+		loop {
+			let mut line = String::new();
+			stdin().read_line(&mut line).unwrap();
+			line = line.trim().into();
 
-			println!("{}", cpu);
+			cmd_sender.send(line).unwrap()
 		}
+	});
 
-		let _ = vectrex.step();
-	}
+	debugger.run();
 }
