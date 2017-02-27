@@ -40,11 +40,13 @@ impl Command {
 			"s" | "step" => Ok(Command::Step),
 			"r" | "reg" | "registers" => Ok(Command::DisplayRegisters),
 			"d" | "dis" | "disassemble" => {
+				let address = args.next()
+					.and_then(|a| if a == "pc" { None } else { Some(a) })
+					.and_then(|addr| addr.parse::<u16>().ok());
+
 				let length = args.next()
 					.and_then(|len| len.parse::<u16>().ok())
 					.unwrap_or(30);
-
-				let address = args.next().and_then(|addr| addr.parse::<u16>().ok());
 				
 				Ok(Command::Disassemble {
 					length: length,
