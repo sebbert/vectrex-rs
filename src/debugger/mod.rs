@@ -64,10 +64,11 @@ impl Debugger {
 						let (next_pc, instr) = disassembler::parse_instruction(self.mem(), pc);
 						println!("{}", instr);
 						pc = next_pc;
-
 					}
 				}
 			};
+
+			println!("");
 		}
 	}
 
