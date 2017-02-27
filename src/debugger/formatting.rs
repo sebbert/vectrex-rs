@@ -1,3 +1,4 @@
+use pack::*;
 use debugger::instruction::*;
 use std::fmt::{ self, Display, Formatter };
 
@@ -5,9 +6,7 @@ impl Display for Mnemonic {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		// Uppercase the result of derived Debug for now
 		let mnemonic = format!("{:?}", self).to_uppercase();
-
 		write!(f, "{}", mnemonic)
-
 	}
 }
 
@@ -100,12 +99,31 @@ impl Display for Addressing {
 	}
 }
 
+fn fmt_register_nibble(nibble: u8) -> String {
+	match Register::from_tfr_exg_nibble(nibble) {
+		Some(reg) => format!("{}", reg),
+		None => "?R?".to_string()
+	}
+}
+
 impl Display for Instruction {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		let &Instruction(ref mnemonic, ref addressing) = self;
 
-		let mnemonic = format!("{}", mnemonic);
+		let addressing_fmt = match self {
+			&Instruction(Mnemonic::Tfr, Addressing::Immediate8(postbyte)) |
+			&Instruction(Mnemonic::Exg, Addressing::Immediate8(postbyte)) => {
+				let (reg_a, reg_b) = unpack_nibbles(postbyte);
 
-		write!(f, "{:<6} {}", mnemonic, addressing)
+				format!("{}, {}", fmt_register_nibble(reg_a), fmt_register_nibble(reg_b))
+			},
+			&Instruction(_, ref addressing) => {
+				format!("{}", addressing)
+			}
+		};
+
+
+		let mnemonic = format!("{}", mnemonic);
+		write!(f, "{:<6} {}", mnemonic, addressing_fmt)
 	}
 }
