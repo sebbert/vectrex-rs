@@ -8,7 +8,7 @@ mod sram;
 mod mem_map;
 mod memory;
 mod motherboard;
-mod debugger;
+mod disassembler;
 mod mc6809;
 mod vectrex;
 mod pack;
@@ -16,8 +16,7 @@ mod pack;
 use bios::Bios;
 use cartridge::Cartridge;
 use vectrex::Vectrex;
-use debugger::{disassembler, Instruction};
-use debugger::disassembler::parse_instruction;
+use disassembler::parse_instruction;
 
 fn main() {
 	env_logger::init().unwrap();
@@ -35,7 +34,7 @@ fn main() {
 			let cpu = vectrex.cpu();
 			let pc = cpu.reg_pc();
 
-			let (_, instr) = disassembler::parse_instruction(vectrex.motherboard(), pc);
+			let (_, instr) = parse_instruction(vectrex.motherboard(), pc);
 
 			println!("{}", instr);
 

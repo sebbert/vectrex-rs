@@ -1,7 +1,14 @@
+mod tests;
+
+pub mod instruction;
+pub mod formatting;
+
+pub use self::instruction::{Instruction, Mnemonic, Addressing, IndexMode, Register};
+pub use self::formatting::*;
+
 use std::fmt::{self, Display, Formatter};
 use pack::unpack_u16;
 use memory::Memory;
-use super::instruction::{Instruction, Mnemonic, Addressing, IndexMode, Register};
 
 pub struct DisassembledInstruction {
 	pub instruction: Option<Instruction>,

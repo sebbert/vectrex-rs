@@ -1,5 +1,5 @@
 use pack::*;
-use debugger::instruction::*;
+use super::instruction::*;
 use std::fmt::{ self, Display, Formatter };
 
 impl Display for Mnemonic {

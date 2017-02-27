@@ -1,8 +1,8 @@
 #![allow(unused_imports)]
 
 use motherboard::Motherboard;
-use debugger::disassembler::parse_instruction;
-use debugger::instruction::{IndexMode, Register};
+use super::parse_instruction;
+use super::instruction::{IndexMode, Register};
 use mem_map::*;
 use bios::Bios;
 
