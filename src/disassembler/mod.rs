@@ -30,10 +30,10 @@ impl Display for DisassembledInstruction {
 			}
 		};
 
-		write!(f, "{:<20} ; [{:04x}]  ", instr_fmt,  self.address);
+		write!(f, "{:<20} ; [{:04x}]  ", instr_fmt,  self.address)?;
 
 		for byte in &self.bytes {
-			write!(f, "{:02x} ", byte);
+			write!(f, "{:02x} ", byte)?;
 		}
 
 		Ok(())
