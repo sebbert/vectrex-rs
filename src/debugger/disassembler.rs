@@ -13,7 +13,14 @@ impl Display for DisassembledInstruction {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		let instr_fmt = match self.instruction {
 			Some(ref instr) => format!("{}", instr),
-			None => "???".to_string()
+			None => {
+				let hexbytes: Vec<String> = self.bytes
+					.iter()
+					.map(|b| format!("${:02X}", b))
+					.collect();
+				
+				format!("DB     {}", hexbytes.join(" "))
+			}
 		};
 
 		write!(f, "{:<20} ; [{:04x}]  ", instr_fmt,  self.address);
