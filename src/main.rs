@@ -38,7 +38,7 @@ fn main() {
 
 			println!("{}", instr);
 
-			println!("{:?}", cpu);
+			println!("{}", cpu);
 		}
 
 		let _ = vectrex.step();

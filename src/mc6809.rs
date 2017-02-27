@@ -1,7 +1,7 @@
 #![allow(unused_variables, unused_assignments)]
 
 use memory::Memory;
-use std::fmt::{ self, Debug, Formatter };
+use std::fmt::{ self, Display, Formatter };
 use pack::*;
 
 #[derive(Default)]
@@ -27,7 +27,7 @@ pub struct Mc6809 {
 	cc_entire_flag: bool
 }
 
-impl Debug for Mc6809 {
+impl Display for Mc6809 {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		fn write_flag(f: &mut Formatter, flag: bool) -> fmt::Result {
 			write!(f, "{}", if flag {"*"} else {" "})
