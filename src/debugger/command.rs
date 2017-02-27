@@ -4,6 +4,7 @@ pub enum Command {
 	Quit,
 	Continue,
 	DisplayRegisters,
+	Step,
 	Disassemble {
 		length: u16,
 		address: Option<u16>
@@ -36,6 +37,7 @@ impl Command {
 
 		match command {
 			"q" | "quit" | "exit" | ":wq" => Ok(Command::Quit),
+			"s" | "step" => Ok(Command::Step),
 			"r" | "reg" | "registers" => Ok(Command::DisplayRegisters),
 			"d" | "dis" | "disassemble" => {
 				let length = args.next()
