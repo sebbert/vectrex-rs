@@ -120,12 +120,12 @@ impl<'a> InstructionParser<'a> {
 			}
 			let offset = offset as i8;
 
-			return IndexMode::Offset5 { reg: reg, offset: offset }
+			return IndexMode::Offset5 { reg: reg.unwrap(), offset: offset }
 		}
 
 		match postbyte & 0b0001_1111 {
-			0 => return IndexMode::Increment1 { reg: reg },
-			2 => return IndexMode::Decrement1 { reg: reg },
+			0 => return IndexMode::Increment1 { reg: reg.unwrap() },
+			2 => return IndexMode::Decrement1 { reg: reg.unwrap() },
 			_ => ()
 		}
 
@@ -133,22 +133,22 @@ impl<'a> InstructionParser<'a> {
 		let index_op = postbyte & 0b1111;
 
 		match index_op {
-			0b0001 => IndexMode::Increment2 { reg: reg, indirect: indirect },
-			0b0011 => IndexMode::Decrement2 { reg: reg, indirect: indirect },
+			0b0001 => IndexMode::Increment2 { reg: reg.unwrap(), indirect: indirect },
+			0b0011 => IndexMode::Decrement2 { reg: reg.unwrap(), indirect: indirect },
 
-			0b0100 => IndexMode::Offset0 { reg: reg, indirect: indirect },
+			0b0100 => IndexMode::Offset0 { reg: reg.unwrap(), indirect: indirect },
 
-			0b0110 => IndexMode::OffsetA { reg: reg, indirect: indirect },
-			0b0101 => IndexMode::OffsetB { reg: reg, indirect: indirect },
-			0b1011 => IndexMode::OffsetD { reg: reg, indirect: indirect },
+			0b0110 => IndexMode::OffsetA { reg: reg.unwrap(), indirect: indirect },
+			0b0101 => IndexMode::OffsetB { reg: reg.unwrap(), indirect: indirect },
+			0b1011 => IndexMode::OffsetD { reg: reg.unwrap(), indirect: indirect },
 
 			0b1000 => IndexMode::Offset8 {
-				reg: reg,
+				reg: reg.unwrap(),
 				offset: self.take_u8() as i8,
 				indirect: indirect
 			},
 			0b1001 => IndexMode::Offset16 {
-				reg: reg,
+				reg: reg.unwrap(),
 				offset: self.take_u16() as i16,
 				indirect: indirect
 			},

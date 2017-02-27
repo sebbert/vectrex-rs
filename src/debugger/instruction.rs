@@ -28,13 +28,13 @@ pub enum Register {
 }
 
 impl Register {
-	pub fn from_indexed_halfnibble(halfnibble: u8) -> Register {
+	pub fn from_indexed_halfnibble(halfnibble: u8) -> Option<Register> {
 		match halfnibble {
-			0b00 => Register::X,
-			0b01 => Register::Y,
-			0b10 => Register::U,
-			0b11 => Register::S,
-			_ => panic!("Invalid index register, parser is probably broken")
+			0b00 => Some(Register::X),
+			0b01 => Some(Register::Y),
+			0b10 => Some(Register::U),
+			0b11 => Some(Register::S),
+			_ => None
 		}
 	}
 }
