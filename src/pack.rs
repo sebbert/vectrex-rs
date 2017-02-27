@@ -11,3 +11,14 @@ pub fn unpack_u16(value: u16) -> (u8, u8) {
 
 	(hi, lo)
 }
+
+pub fn pack_nibbles(hi: u8, lo: u8) -> u8 {
+	(hi << 4) | (lo & 0x0f)
+}
+
+pub fn unpack_nibbles(value: u8) -> (u8, u8) {
+	let hi = value >> 4;
+	let lo = value & 0x0f;
+
+	(hi, lo)
+}
