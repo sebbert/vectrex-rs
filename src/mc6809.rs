@@ -907,15 +907,22 @@ impl Mc6809 {
 	}
 
 	fn instr_suba(&mut self, mem: &Memory, addr: u16) {
-		panic!("Unimplemented instruction SUBA");
+		let m = self.reg_a;
+		let s = mem.read_u8(addr);
+		self.reg_a = self.sub_u8_and_set_flags(m, s);
 	}
 
 	fn instr_subb(&mut self, mem: &Memory, addr: u16) {
-		panic!("Unimplemented instruction SUBB");
+		let m = self.reg_b;
+		let s = mem.read_u8(addr);
+		self.reg_b = self.sub_u8_and_set_flags(m, s);
 	}
 
 	fn instr_subd(&mut self, mem: &Memory, addr: u16) {
-		panic!("Unimplemented instruction SUBD");
+		let m = self.reg_d();
+		let s = mem.read_u16(addr);
+		let result = self.sub_u16_and_set_flags(m, s);
+		self.set_reg_d(result);
 	}
 
 	fn instr_swi(&mut self, mem: &Memory) {
