@@ -46,7 +46,9 @@ impl Debugger {
 
 			match cmd {
 				Command::DisplayRegisters => println!("{}", self.cpu()),
-				Command::Continue => {},
+				Command::Continue => {
+					self.state = State::Running;
+				},
 				Command::Step => {
 					let pc = self.cpu().reg_pc();
 					let (_, instr) = disassembler::parse_instruction(self.mem(), pc);
@@ -76,7 +78,7 @@ impl Debugger {
 			match self.state {
 				State::Quitting => break,
 				State::Debugging => self.step(),
-				_ => {}
+				State::Running => self.vectrex.step()
 			}
 		}
 	}
