@@ -748,7 +748,7 @@ impl Mc6809 {
 	}
 
 	fn instr_rts(&mut self, mem: &Memory) {
-		panic!("Unimplemented instruction RTS");
+		self.reg_pc = Self::pop_u16(&mut self.reg_s, mem);
 	}
 
 	fn instr_sbca(&mut self, mem: &Memory, addr: u16) {
