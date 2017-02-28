@@ -1041,7 +1041,7 @@ impl Mc6809 {
 		mem.write_u8(*sp, value);
 	}
 
-	fn pop_u8(sp: &mut u16, mem: &mut Memory) -> u8 {
+	fn pop_u8(sp: &mut u16, mem: &Memory) -> u8 {
 		let value = mem.read_u8(*sp);
 		*sp = sp.checked_sub(1).expect("Stack underflow");
 		value
@@ -1054,7 +1054,7 @@ impl Mc6809 {
 		Self::push_u8(sp, mem, hi);
 	}
 
-	fn pop_u16(sp: &mut u16, mem: &mut Memory) -> u16 {
+	fn pop_u16(sp: &mut u16, mem: &Memory) -> u16 {
 		let hi = Self::pop_u8(sp, mem);
 		let lo = Self::pop_u8(sp, mem);
 
