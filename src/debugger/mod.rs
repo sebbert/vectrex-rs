@@ -72,10 +72,9 @@ impl Debugger {
 	}
 
 	pub fn run(mut self) {
-		let mut keep_running = true;
-		while keep_running {
+		loop {
 			match self.state {
-				State::Quitting => keep_running = false,
+				State::Quitting => break,
 				State::Debugging => self.step(),
 				_ => {}
 			}
