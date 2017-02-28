@@ -39,6 +39,7 @@ impl Command {
 			"q" | "quit" | "exit" | ":wq" => Ok(Command::Quit),
 			"s" | "step" => Ok(Command::Step),
 			"r" | "reg" | "registers" => Ok(Command::DisplayRegisters),
+			"c" | "cnt" | "continue" => Ok(Command::Continue),
 			"d" | "dis" | "disassemble" => {
 				let address = args.next()
 					.and_then(|a| if a == "pc" { None } else { Some(a) })
