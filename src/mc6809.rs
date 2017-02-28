@@ -763,16 +763,30 @@ impl Mc6809 {
 		panic!("Unimplemented instruction SEX");
 	}
 
+	fn com_and_set_flags(&mut self, value: u8) -> u8 {
+		let value = !value;
+ 
+		self.cc_carry = true;
+		self.cc_overflow = false;
+		self.cc_negative = (value >> 7) == 1;
+		self.cc_zero = value == 0;
+
+		value
+	}
+
 	fn instr_coma(&mut self, mem: &Memory) {
-		panic!("Unimplemented instruction COMA");
+		let value = self.reg_a;
+		self.reg_a = self.com_and_set_flags(value);
 	}
 
 	fn instr_comb(&mut self, mem: &Memory) {
-		panic!("Unimplemented instruction COMB");
+		let value = self.reg_a;
+		self.reg_a = self.com_and_set_flags(value);
 	}
 
-	fn instr_com(&mut self, mem: &Memory, addr: u16) {
-		panic!("Unimplemented instruction COM");
+	fn instr_com(&mut self, mem: &mut Memory, addr: u16) {
+		let value = mem.read_u8(addr);
+		mem.write_u8(addr, self.com_and_set_flags(value));
 	}
 
 	fn instr_cwai(&mut self, mem: &Memory, addr: u16) {
