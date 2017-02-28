@@ -33,9 +33,7 @@ fn main() {
 	let cart = Cartridge::from_bytes(cart).ok();
 
 	let vectrex = Vectrex::new(bios, cart);
-
 	let (cmd_sender, cmd_reciever) = mpsc::channel();
-
 	let debugger = Debugger::new(vectrex, cmd_reciever);
 
 	let _ = thread::spawn(move || {
