@@ -29,15 +29,15 @@ pub struct Mc6809 {
 
 impl Display for Mc6809 {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		fn write_flag(f: &mut Formatter, flag: bool) -> fmt::Result {
-			write!(f, "{}", if flag {"*"} else {" "})
-		}
-
 		try!(writeln!(f, "DP: {:02x}     A: {:02x}", self.reg_dp(), self.reg_a()));
 		try!(writeln!(f, "PC: {:04x}   B: {:02x}", self.reg_pc(), self.reg_b()));
 		try!(writeln!(f, " X: {:04x}   D: {:04x}", self.reg_x(), self.reg_d()));
 		try!(writeln!(f, " Y: {:04x}", self.reg_y()));
 		try!(write!  (f, " S: {:04x}  CC:", self.reg_s()));
+
+		fn write_flag(f: &mut Formatter, flag: bool) -> fmt::Result {
+			write!(f, "{}", if flag {"*"} else {" "})
+		}
 
 		try!(write_flag(f, self.cc_entire_flag));
 		try!(write_flag(f, self.cc_firq_mask));
@@ -255,10 +255,9 @@ impl Mc6809 {
 			0x8d | 0x17 => { // BSR and LBSR, respectively
 				cycles += 9;
 
-				let (imm_size, addr_offset) = if op == 0x8d {
-					(1, mem.read_u8(self.reg_pc) as i8 as i16)
-				} else {
-					(2, mem.read_u16(self.reg_pc) as i16)
+				let (imm_size, addr_offset) = match op {
+					0x8d => (1, mem.read_u8(self.reg_pc) as i8 as i16),
+					_    => (2, mem.read_u16(self.reg_pc) as i16)
 				};
 
 				self.reg_pc = self.reg_pc.wrapping_add(imm_size);
