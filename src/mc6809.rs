@@ -1073,20 +1073,7 @@ impl Mc6809 {
 		self.cc_carry = carry;
 		self.cc_zero = result == 0;
 		self.cc_negative = (result & 0b1000_0000) == 0b1000_0000;
-	}
 
-	fn sub_i8_and_set_flags(&mut self, a: i8, b: i8) {
-		let (result, overflow) = i8::overflowing_sub(a, b);
-		self.cc_overflow = overflow;
-		self.cc_zero = result == 0;
-		self.cc_negative = result < 0;
-	}
-
-	fn sub_i16_and_set_flags(&mut self, a: i16, b: i16) {
-		let (result, overflow) = i16::overflowing_sub(a, b);
-		self.cc_overflow = overflow;
-		self.cc_zero = result == 0;
-		self.cc_negative = result < 0;
 	}
 
 	pub fn reg_a(&self) -> u8 { self.reg_a }
