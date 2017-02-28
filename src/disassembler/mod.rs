@@ -18,23 +18,22 @@ pub struct DisassembledInstruction {
 
 impl Display for DisassembledInstruction {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+		fn fmt_bytes_hex(bytes: &[u8]) -> String {
+			bytes.iter()
+				.map(|b| format!("{:02x}", b))
+				.collect::<Vec<_>>()
+				.join(" ")
+		}
+
 		let instr_fmt = match self.instruction {
 			Some(ref instr) => format!("{}", instr),
 			None => {
-				let hexbytes: Vec<String> = self.bytes
-					.iter()
-					.map(|b| format!("${:02X}", b))
-					.collect();
-				
-				format!("DB     {}", hexbytes.join(" "))
+				format!("DB     {}", fmt_bytes_hex(&self.bytes))
 			}
 		};
 
-		write!(f, "{:<20} ; [{:04x}]  ", instr_fmt,  self.address)?;
-
-		for byte in &self.bytes {
-			write!(f, "{:02x} ", byte)?;
-		}
+		let hexbytes = fmt_bytes_hex(&self.bytes);
+		write!(f, "{:<20} ; [{:04x}]  {}", instr_fmt, self.address, hexbytes)?;
 
 		Ok(())
 	}
