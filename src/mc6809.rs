@@ -1061,19 +1061,22 @@ impl Mc6809 {
 		pack_u16(hi, lo)
 	}
 
-	fn sub_u8_and_set_flags(&mut self, a: u8, b: u8) {
+	fn sub_u8_and_set_flags(&mut self, a: u8, b: u8) -> u8 {
 		let (result, carry) = u8::overflowing_sub(a, b);
 		self.cc_carry = carry;
 		self.cc_zero = result == 0;
 		self.cc_negative = (result & 0b1000) == 0b1000;
+		
+		result
 	}
 
-	fn sub_u16_and_set_flags(&mut self, a: u16, b: u16) {
+	fn sub_u16_and_set_flags(&mut self, a: u16, b: u16) -> u16 {
 		let (result, carry) = u16::overflowing_sub(a, b);
 		self.cc_carry = carry;
 		self.cc_zero = result == 0;
 		self.cc_negative = (result & 0b1000_0000) == 0b1000_0000;
 
+		result
 	}
 
 	pub fn reg_a(&self) -> u8 { self.reg_a }
