@@ -55,7 +55,6 @@ impl Debugger {
 				},
 				Command::Quit => {
 					self.state = State::Quitting;
-					return
 				},
 				Command::Disassemble { length, address } => {
 					let mut pc = address.unwrap_or(self.cpu().reg_pc());

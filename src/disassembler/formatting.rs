@@ -108,20 +108,18 @@ fn fmt_register_nibble(nibble: u8) -> String {
 
 impl Display for Instruction {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-		let &Instruction(ref mnemonic, ref addressing) = self;
+		let &Instruction(ref mnemonic, _) = self;
 
 		let addressing_fmt = match self {
 			&Instruction(Mnemonic::Tfr, Addressing::Immediate8(postbyte)) |
 			&Instruction(Mnemonic::Exg, Addressing::Immediate8(postbyte)) => {
 				let (reg_a, reg_b) = unpack_nibbles(postbyte);
-
 				format!("{}, {}", fmt_register_nibble(reg_a), fmt_register_nibble(reg_b))
 			},
 			&Instruction(_, ref addressing) => {
 				format!("{}", addressing)
 			}
 		};
-
 
 		let mnemonic = format!("{}", mnemonic);
 		write!(f, "{:<6} {}", mnemonic, addressing_fmt)
