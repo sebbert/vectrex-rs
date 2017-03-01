@@ -55,10 +55,6 @@ impl Display for Mc6809 {
 	}
 }
 
-macro_rules! invalid_opcode {
-    ($op:expr) => (panic!("Invalid opcode 0x{:02x}", $op))
-}
-
 #[allow(dead_code)]
 impl Mc6809 {	
 	pub fn new(mem: &Memory) -> Mc6809 {
@@ -213,8 +209,7 @@ impl Mc6809 {
 					0x2f => branch16!(Self::cond_signed_less_than_or_equal),
 					0x28 => branch16!(Self::cond_overflow_clear),
 					0x29 => branch16!(Self::cond_overflow_set),
-
-					_ => invalid_opcode!(op)
+					_ => self.invalid_opcode(op)
 				}
 			},
 			PAGE_3 => {
@@ -231,7 +226,7 @@ impl Mc6809 {
 					0xa3 => indexed!(Self::instr_cmpu, 7),
 					0xb3 => extended!(Self::instr_cmpu, 8),
 					0x3f => inherent!(Self::instr_swi3, 20),
-					_ => invalid_opcode!(op)
+					_ => self.invalid_opcode(op)
 				}
 			},
 
@@ -471,10 +466,14 @@ impl Mc6809 {
 			0x0d => direct!(Self::instr_tst, 6),
 			0x6d => indexed!(Self::instr_tst, 6),
 			0x7d => extended!(Self::instr_tst, 7),
-			_ => invalid_opcode!(op)
+			_ => self.invalid_opcode(op)
 		}
 
 		cycles
+	}
+
+	fn invalid_opcode(&self, op: u8) {
+    	panic!("Invalid opcode {:02x} at {:04x}", op, self.reg_pc.wrapping_sub(1))
 	}
 
 	// Simple conditionals
