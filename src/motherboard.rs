@@ -39,6 +39,10 @@ impl Memory for Motherboard {
 			SRAM_START ... SRAM_END => {
 				self.sram.read_u8(addr - SRAM_START)
 			}
+			VIA_START ... VIA_END => {
+				warn!("Read from 6522VIA interface adapter is not yet implemented");
+				0
+			}
 			_ => panic!("Read from unmapped address: 0x{:04x}", addr)
 		}
 	}
@@ -53,6 +57,9 @@ impl Memory for Motherboard {
 			}
 			SRAM_START ... SRAM_END => {
 				self.sram.write_u8(addr - SRAM_START, value)
+			}
+			VIA_START ... VIA_END => {
+				warn!("Write to 6522VIA interface adapter is not yet implemented");
 			}
 			_ => panic!("Write to unmapped address: 0x{:04x}", addr)
 		}

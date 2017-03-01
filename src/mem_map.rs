@@ -19,3 +19,7 @@ pub const EXECUTIVE_LENGTH: u16 = EXECUTIVE_END - EXECUTIVE_START + 1;
 pub const BIOS_START: u16 = MINE_STORM_START;
 pub const BIOS_END: u16 = EXECUTIVE_END;
 pub const BIOS_LENGTH: u16 = BIOS_END - BIOS_START + 1;
+
+pub const VIA_START: u16 = 0xd000;
+pub const VIA_END: u16 = 0xdfff;
+pub const VIA_LENGTH: u16 = VIA_END - VIA_START + 1;
