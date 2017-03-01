@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, u16};
 
 pub enum Command {
 	Quit,
@@ -41,9 +41,8 @@ impl Command {
 			"r" | "reg" | "registers" => Ok(Command::DisplayRegisters),
 			"c" | "cnt" | "continue" => Ok(Command::Continue),
 			"d" | "dis" | "disassemble" => {
-				let address = args.next()
-					.and_then(|a| if a == "pc" { None } else { Some(a) })
-					.and_then(|addr| addr.parse::<u16>().ok());
+
+				let address = parse_address(args.next());
 
 				let length = args.next()
 					.and_then(|len| len.parse::<u16>().ok())
@@ -53,8 +52,14 @@ impl Command {
 					length: length,
 					address: address
 				})
-			}
+			},
 			_ => Err(ParseError::InvalidCommand(command.to_string()))
 		}
 	}
+}
+
+fn parse_address(addr: Option<&str>) -> Option<u16> {
+	addr.map(|a| a.trim())
+		.and_then(|a| if a == "pc" { None } else { Some(a) })
+		.and_then(|a| u16::from_str_radix(a, 16).ok())
 }
