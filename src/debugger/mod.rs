@@ -21,7 +21,8 @@ pub enum State {
 pub struct Debugger {
 	vectrex: Vectrex,
 	command_receiver: Receiver<String>,
-	state: State
+	state: State,
+	trace_enabled: bool
 }
 
 impl Debugger {
@@ -29,7 +30,8 @@ impl Debugger {
 		Debugger {
 			vectrex: vectrex,
 			command_receiver: command_receiver,
-			state: State::Debugging
+			state: State::Debugging,
+			trace_enabled: false
 		}
 	}
 
@@ -50,10 +52,14 @@ impl Debugger {
 					self.state = State::Running;
 				},
 				Command::Step => {
-					let pc = self.cpu().reg_pc();
-					let (_, instr) = disassembler::parse_instruction(self.mem(), pc);
-					println!("{}", instr);
-					self.vectrex.step();
+					self.step();
+				},
+				Command::ToggleTrace => {
+					self.trace_enabled = !self.trace_enabled;
+					println!("Trace {}", match self.trace_enabled {
+						true => "enabled",
+						false => "disabled"
+					});
 				},
 				Command::Quit => {
 					self.state = State::Quitting;
@@ -73,12 +79,22 @@ impl Debugger {
 		}
 	}
 
+	fn step(&mut self) {
+		if self.trace_enabled {
+			let pc = self.cpu().reg_pc();
+			let (_, instr) = disassembler::parse_instruction(self.mem(), pc);
+			println!("{}", instr);
+		}
+
+		self.vectrex.step();
+	}
+
 	pub fn run(mut self) {
 		loop {
 			match self.state {
 				State::Quitting => break,
 				State::Debugging => self.process_command_queue(),
-				State::Running => self.vectrex.step()
+				State::Running => self.step()
 			}
 		}
 	}

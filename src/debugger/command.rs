@@ -5,6 +5,7 @@ pub enum Command {
 	Continue,
 	DisplayRegisters,
 	Step,
+	ToggleTrace,
 	Disassemble {
 		length: u16,
 		address: Option<u16>
@@ -40,6 +41,7 @@ impl Command {
 			"s" | "step" => Ok(Command::Step),
 			"r" | "reg" | "registers" => Ok(Command::DisplayRegisters),
 			"c" | "cnt" | "continue" => Ok(Command::Continue),
+			"t" | "trace" => Ok(Command::ToggleTrace),
 			"d" | "dis" | "disassemble" => {
 
 				let address = parse_address(args.next());
