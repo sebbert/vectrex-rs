@@ -10,6 +10,7 @@ mod memory;
 mod motherboard;
 mod disassembler;
 mod mc6809;
+mod via;
 mod vectrex;
 mod pack;
 mod debugger;

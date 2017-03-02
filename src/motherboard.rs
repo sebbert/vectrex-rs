@@ -3,12 +3,14 @@ use bios::Bios;
 use cartridge::Cartridge;
 use sram::Sram;
 use memory::Memory;
+use via::Via;
 use pack::*;
 
 pub struct Motherboard {
 	bios: Bios,
 	cartridge: Option<Cartridge>,
 	sram: Sram,
+	via: Via
 }
 
 impl Motherboard {
@@ -17,6 +19,7 @@ impl Motherboard {
 			bios: bios,
 			cartridge: cartridge,
 			sram: Sram::new(),
+			via: Via::new()
 		}
 	}
 }
@@ -40,8 +43,7 @@ impl Memory for Motherboard {
 				self.sram.read_u8(addr - SRAM_START)
 			}
 			VIA_START ... VIA_END => {
-				warn!("Read from 6522VIA interface adapter is not yet implemented");
-				0
+				self.via.read(addr)
 			}
 			_ => panic!("Read from unmapped address: 0x{:04x}", addr)
 		}
@@ -59,7 +61,7 @@ impl Memory for Motherboard {
 				self.sram.write_u8(addr - SRAM_START, value)
 			}
 			VIA_START ... VIA_END => {
-				warn!("Write to 6522VIA interface adapter is not yet implemented");
+				self.via.write(addr, value)
 			}
 			_ => panic!("Write to unmapped address: 0x{:04x}", addr)
 		}
