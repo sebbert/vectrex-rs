@@ -33,7 +33,7 @@ impl Debugger {
 		}
 	}
 
-	pub fn step(&mut self) {
+	fn process_command_queue(&mut self) {
 		while let Ok(cmd) = self.command_receiver.try_recv() {
 			let cmd = match Command::parse(cmd) {
 				Ok(cmd) => cmd,
@@ -77,7 +77,7 @@ impl Debugger {
 		loop {
 			match self.state {
 				State::Quitting => break,
-				State::Debugging => self.step(),
+				State::Debugging => self.process_command_queue(),
 				State::Running => self.vectrex.step()
 			}
 		}
