@@ -9,13 +9,17 @@ pub enum Command {
 	Disassemble {
 		length: u16,
 		address: Option<u16>
-	}
+	},
+	AddBreakpoint { address: u16 },
+	DeleteBreakpoint { address: u16 },
+	ListBreakpoints
 }
 
 #[derive(Debug)]
 pub enum ParseError {
 	Empty,
-	InvalidCommand(String)
+	InvalidCommand(String),
+	MissingArgument(&'static str)
 }
 
 impl fmt::Display for ParseError {
@@ -23,6 +27,7 @@ impl fmt::Display for ParseError {
     	match self {
     		&ParseError::Empty => Ok(()),
     		&ParseError::InvalidCommand(ref cmd) => write!(f, "{}: Invalid command", cmd),
+    		&ParseError::MissingArgument(ref argname) => write!(f, "Missing argument '{}'", argname),
     	}
     }
 }
@@ -53,6 +58,28 @@ impl Command {
 				Ok(Command::Disassemble {
 					length: length,
 					address: address
+				})
+			},
+			"b" | "break" | "breakpoint" => {
+				let arg1 = match args.next() {
+					Some(arg) => arg,
+					None => return Ok(Command::ListBreakpoints)
+				};
+
+				let (is_delete, addr) = match arg1 {
+					"list" | "show" => return Ok(Command::ListBreakpoints),
+					"del" | "delete" => (true, parse_address(args.next())),
+					addr => (false, parse_address(Some(addr)))
+				};
+
+				let addr = match addr {
+					Some(addr) => addr,
+					None => return Err(ParseError::MissingArgument("address"))
+				};
+
+				Ok(match is_delete {
+					true => Command::DeleteBreakpoint { address: addr },
+					false => Command::AddBreakpoint { address: addr }
 				})
 			},
 			_ => Err(ParseError::InvalidCommand(command.to_string()))

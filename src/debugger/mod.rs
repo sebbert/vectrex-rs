@@ -5,6 +5,7 @@ mod command;
 use self::command::Command;
 
 use std::sync::mpsc::Receiver;
+use std::collections::HashSet;
 
 use mc6809::Mc6809;
 use memory::Memory;
@@ -22,7 +23,8 @@ pub struct Debugger {
 	vectrex: Vectrex,
 	command_receiver: Receiver<String>,
 	state: State,
-	trace_enabled: bool
+	trace_enabled: bool,
+	breakpoints: HashSet<u16>
 }
 
 impl Debugger {
@@ -31,7 +33,8 @@ impl Debugger {
 			vectrex: vectrex,
 			command_receiver: command_receiver,
 			state: State::Debugging,
-			trace_enabled: false
+			trace_enabled: false,
+			breakpoints: HashSet::new()
 		}
 	}
 
@@ -72,6 +75,24 @@ impl Debugger {
 						println!("{}", instr);
 						pc = next_pc;
 					}
+				},
+				Command::AddBreakpoint { address } => {
+					match self.breakpoints.insert(address) {
+						true => println!("Added breakpoint at {:04x}", address),
+						false => println!("Breakpoint already exists at {:04x}", address)
+					}
+				},
+				Command::DeleteBreakpoint { ref address } => {
+					match self.breakpoints.remove(address) {
+						true => println!("Removed breakpoint at {:04x}", address),
+						false => println!("No breakpoint at {:04x}", address)
+					}
+				},
+				Command::ListBreakpoints => {
+					println!("Currently active breakpoints:");
+					for addr in &self.breakpoints {
+						println!("{:04x}", addr);
+					}
 				}
 			};
 
@@ -87,6 +108,13 @@ impl Debugger {
 		}
 
 		self.vectrex.step();
+
+		let pc = self.cpu().reg_pc();
+		if self.breakpoints.contains(&pc) {
+			println!("Hit breakpoint at {:04x}", pc);
+			println!("");
+			self.state = State::Debugging;
+		}
 	}
 
 	pub fn run(mut self) {
