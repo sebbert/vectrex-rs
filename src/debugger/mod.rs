@@ -93,6 +93,27 @@ impl Debugger {
 					for addr in &self.breakpoints {
 						println!("{:04x}", addr);
 					}
+				},
+				Command::ViewMemory { address, length } => {
+					const BYTES_PER_ROW: u8 = 8;
+
+					let mut bytes = Vec::with_capacity(length as _);
+					for i in 0..length {
+						let byte = self.mem().read_u8(address.wrapping_add(i));
+						bytes.push(byte);
+					}
+
+					let hexdump = bytes
+						.chunks(BYTES_PER_ROW as usize)
+						.map(|chunk| chunk
+							.iter()
+							.map(|b| format!("{:02x}", b))
+							.collect::<Vec<_>>()
+							.join(" "))
+						.collect::<Vec<_>>()
+						.join("\n");
+
+					println!("{}", hexdump);
 				}
 			};
 

@@ -12,7 +12,11 @@ pub enum Command {
 	},
 	AddBreakpoint { address: u16 },
 	DeleteBreakpoint { address: u16 },
-	ListBreakpoints
+	ListBreakpoints,
+	ViewMemory {
+		address: u16,
+		length: u16
+	}
 }
 
 #[derive(Debug)]
@@ -82,6 +86,20 @@ impl Command {
 					false => Command::AddBreakpoint { address: addr }
 				})
 			},
+			"m" | "mem" | "memory" => {
+				parse_address(args.next())
+					.map(|address| {
+						let length = args.next()
+							.and_then(|len| len.parse::<u16>().ok())
+							.unwrap_or(16);
+
+						Command::ViewMemory {
+							address: address,
+							length: length
+						}
+					})
+					.ok_or(ParseError::MissingArgument("address"))
+			}
 			_ => Err(ParseError::InvalidCommand(command.to_string()))
 		}
 	}
