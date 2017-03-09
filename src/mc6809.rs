@@ -1126,10 +1126,6 @@ impl Mc6809 {
 	}
 
 	pub fn set_reg_cc(&mut self, value: u8) {
-		fn unpack_flag(value: u8, bit_index: u8) -> bool {
-			1 == (value >> bit_index) & 1
-		}
-
 		self.cc_carry       = unpack_flag(value, 0);
 		self.cc_overflow    = unpack_flag(value, 1);
 		self.cc_zero        = unpack_flag(value, 2);
