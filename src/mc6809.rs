@@ -1115,14 +1115,16 @@ impl Mc6809 {
 	pub fn reg_pc(&self) -> u16 { self.reg_pc }
 
 	pub fn reg_cc(&self) -> u8 {
-		  (self.cc_carry as u8) << 0
-		| (self.cc_overflow as u8) << 1
-		| (self.cc_zero as u8) << 2
-		| (self.cc_negative as u8) << 3
-		| (self.cc_irq_mask as u8) << 4
-		| (self.cc_half_carry as u8) << 5
-		| (self.cc_firq_mask as u8) << 6
-		| (self.cc_entire_flag as u8) << 7
+		pack_flags([
+			self.cc_carry,
+			self.cc_overflow,
+			self.cc_zero,
+			self.cc_negative,
+			self.cc_irq_mask,
+			self.cc_half_carry,
+			self.cc_firq_mask,
+			self.cc_entire_flag
+		])
 	}
 
 	pub fn set_reg_cc(&mut self, value: u8) {
