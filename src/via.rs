@@ -9,7 +9,7 @@ const ADDR_T1_LATCH_HI: u16 = 7;
 
 #[derive(Default)]
 pub struct Via {
-	t1_interrupt_enabled: bool,
+	ifr_t1: bool,
 
 	t1_counter_lo: u8,
 	t1_counter_hi: u8,
@@ -22,13 +22,16 @@ impl Via {
 		Default::default()
 	}
 
-	pub fn read(&self, addr: u16) -> u8 {
+	pub fn read(&mut self, addr: u16) -> u8 {
 		let addr = Self::mask_addr(addr);
 		match addr {
 			4 => {
-				0
+				self.ifr_t1 = false;
+				self.t1_counter_lo
 			}
 			5 => self.t1_counter_hi,
+			6 => self.t1_latch_lo,
+			7 => self.t1_latch_hi,
 			_ => {
 				error!("Read from unimplemented VIA reg {:01x}", addr);
 				0
@@ -42,6 +45,15 @@ impl Via {
 			ADDR_T1_COUNTER_LO | ADDR_T1_LATCH_LO => {
 				self.t1_latch_lo = value;
 			},
+			ADDR_T1_LATCH_HI => {
+				self.t1_latch_hi = value;
+			},
+			ADDR_T1_COUNTER_HI => {
+				self.t1_latch_hi = value;
+				self.t1_counter_hi = self.t1_latch_hi;
+				self.t1_counter_lo = self.t1_latch_lo;
+				self.ifr_t1 = false;
+			}
 
 			_ => warn!("Write to unimplemented VIA reg {:01x} = {:02x}", addr, value)
 		}
