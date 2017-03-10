@@ -39,12 +39,12 @@ impl Display for DisassembledInstruction {
 	}
 }
 
-pub fn parse_instruction(memory: &Memory, addr: u16) -> (u16, DisassembledInstruction) {
+pub fn parse_instruction(memory: &mut Memory, addr: u16) -> (u16, DisassembledInstruction) {
 	InstructionParser::new(memory, addr).parse_instruction()
 }
 
 struct InstructionParser<'a> {
-	memory: &'a Memory,
+	memory: &'a mut Memory,
 	addr: u16,
 	bytes: Vec<u8>
 }
@@ -54,7 +54,7 @@ fn instr(mnemonic: Mnemonic, addressing: Addressing) -> Option<Instruction> {
 }
 
 impl<'a> InstructionParser<'a> {
-	pub fn new(memory: &'a Memory, addr: u16) -> InstructionParser<'a> {
+	pub fn new(memory: &'a mut Memory, addr: u16) -> InstructionParser<'a> {
 		InstructionParser {
 			memory: memory,
 			addr: addr,

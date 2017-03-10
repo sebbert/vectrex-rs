@@ -25,7 +25,7 @@ impl Motherboard {
 }
 
 impl Memory for Motherboard {
-	fn read_u8(&self, addr: u16) -> u8 {
+	fn read_u8(&mut self, addr: u16) -> u8 {
 		match addr {
 			CARTRIDGE_START ... CARTRIDGE_END => {
 				match self.cartridge {
@@ -67,7 +67,7 @@ impl Memory for Motherboard {
 		}
 	}
 
-	fn read_u16(&self, addr: u16) -> u16 {
+	fn read_u16(&mut self, addr: u16) -> u16 {
 		let hi = self.read_u8(addr);
 		let lo = self.read_u8(addr + 1);
 

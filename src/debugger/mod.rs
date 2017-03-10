@@ -149,5 +149,5 @@ impl Debugger {
 	}
 
 	fn cpu(&self) -> &Mc6809 { self.vectrex.cpu() }
-	fn mem(&self) -> &Memory { self.vectrex.motherboard() }
+	fn mem(&mut self) -> &mut Memory { self.vectrex.motherboard() }
 }

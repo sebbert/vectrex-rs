@@ -10,8 +10,8 @@ pub struct Vectrex {
 
 impl Vectrex {
 	pub fn new(bios: Bios, cartridge: Option<Cartridge>) -> Vectrex {
-		let mobo = Motherboard::new(bios, cartridge);
-		let cpu = Mc6809::new(&mobo);
+		let mut mobo = Motherboard::new(bios, cartridge);
+		let cpu = Mc6809::new(&mut mobo);
 
 		Vectrex {
 			motherboard: mobo,
@@ -27,7 +27,7 @@ impl Vectrex {
 		&self.cpu
 	}
 
-	pub fn motherboard(&self) -> &Motherboard {
-		&self.motherboard
+	pub fn motherboard(&mut self) -> &mut Motherboard {
+		&mut self.motherboard
 	}
 }
