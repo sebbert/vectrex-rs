@@ -25,13 +25,13 @@ impl Via {
 	pub fn read(&mut self, addr: u16) -> u8 {
 		let addr = Self::mask_addr(addr);
 		match addr {
-			4 => {
+			ADDR_T1_COUNTER_LO => {
 				self.ifr_t1 = false;
 				self.t1_counter_lo
 			}
-			5 => self.t1_counter_hi,
-			6 => self.t1_latch_lo,
-			7 => self.t1_latch_hi,
+			ADDR_T1_COUNTER_HI => self.t1_counter_hi,
+			ADDR_T1_LATCH_LO => self.t1_latch_lo,
+			ADDR_T1_LATCH_HI => self.t1_latch_hi,
 			_ => {
 				error!("Read from unimplemented VIA reg {:01x}", addr);
 				0
