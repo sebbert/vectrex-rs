@@ -198,6 +198,7 @@ impl Mc6809 {
 					// Branch instructions
 
 					0x21 => branch16!(Self::cond_never, 5, 5),
+					0x26 => branch16!(Self::cond_not_equal),
 					0x27 => branch16!(Self::cond_equal),
 					0x22 => branch16!(Self::cond_unsigned_greater_than),
 					0x24 => branch16!(Self::cond_unsigned_greater_than_or_equal),
@@ -234,6 +235,7 @@ impl Mc6809 {
 
 			0x20 => branch8!(Self::cond_always),
 			0x21 => branch8!(Self::cond_never),
+			0x26 => branch8!(Self::cond_not_equal),
 			0x27 => branch8!(Self::cond_equal),
 			0x22 => branch8!(Self::cond_unsigned_greater_than),
 			0x24 => branch8!(Self::cond_unsigned_greater_than_or_equal),
