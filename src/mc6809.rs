@@ -124,10 +124,9 @@ impl Mc6809 {
 
 		macro_rules! indexed {
 			($f:path, $cycles:expr) => ({
-				let postbyte = mem.read_u8(self.reg_pc);
-				self.reg_pc = self.reg_pc.wrapping_add(1);
-				cycles += $cycles;
-				panic!("Indexed addressing is not yet implemented");
+				let (addr, index_cycles) = self.parse_indexed(mem);
+				cycles += $cycles + index_cycles;
+				$f(self, mem, addr)
 			})
 		}
 
@@ -472,6 +471,117 @@ impl Mc6809 {
 		cycles
 	}
 
+	/// Returns a tuple of the form (effective_address, cycles)
+	fn parse_indexed(&mut self, mem: &mut Memory) -> (u16, usize) {
+
+		let postbyte = self.take_u8_pc(mem);
+
+		let indirect = (postbyte >> 4) & 1 == 1;
+
+		macro_rules! indexed_indirect {
+			($cycles:expr, $f:expr) => ({
+				let mut addr = $f();
+				let mut cycles = $cycles;
+
+				if indirect {
+					addr = mem.read_u16(addr);
+					cycles += 3;
+				}
+
+				(addr, cycles)
+			})
+		}
+		
+		enum IndexRegister { X, Y, U, S }
+		
+		impl IndexRegister {
+			pub fn write(&self, cpu: &mut Mc6809, value: u16) {
+				match self {
+					&IndexRegister::X => cpu.set_reg_x(value),
+					&IndexRegister::Y => cpu.set_reg_y(value),
+					&IndexRegister::U => cpu.set_reg_u(value),
+					&IndexRegister::S => cpu.set_reg_s(value)
+				}
+			}
+			
+			pub fn read(&self, cpu: &Mc6809) -> u16 {
+				match self {
+					&IndexRegister::X => cpu.reg_x(),
+					&IndexRegister::Y => cpu.reg_y(),
+					&IndexRegister::U => cpu.reg_u(),
+					&IndexRegister::S => cpu.reg_s()
+				}
+			}
+		}
+
+		let reg_nibble = (postbyte & 0b0110_0000) >> 5;
+		let reg = match reg_nibble {
+			0 => IndexRegister::X,
+			1 => IndexRegister::Y,
+			2 => IndexRegister::U,
+			3 => IndexRegister::S,
+			_ => unreachable!()
+		};
+
+		if postbyte >> 7 == 0 {
+			let mut offset = postbyte & 0b0001_1111;
+
+			if offset >> 4 == 1 {
+				offset |= 0b1110_0000;
+			}
+			let offset = offset as i8 as i16;
+			return (offset_address(reg.read(self), offset), 1);
+		}
+
+		match postbyte & 0b0001_1111 {
+			0 => return {
+				let addr = reg.read(self);
+				reg.write(self, addr.wrapping_add(1));
+				(addr, 2)
+			},
+			2 => return {
+				let addr = reg.read(self);
+				reg.write(self, addr.wrapping_sub(1));
+				(addr, 2)
+			},
+			_ => ()
+		}
+		let index_op = postbyte & 0b1111;
+
+		match index_op {
+			0b0001 => indexed_indirect!(3, || {
+				let addr = reg.read(self);
+				reg.write(self, addr.wrapping_add(1));
+				addr
+			}),
+			0b0011 => indexed_indirect!(3, || {
+				let addr = reg.read(self);
+				reg.write(self, addr.wrapping_sub(1));
+				addr
+			}),
+			0b0100 => indexed_indirect!(0, || reg.read(self)),
+			0b0110 => indexed_indirect!(1, || reg.read(self).wrapping_add(self.reg_a as u16)),
+			0b0101 => indexed_indirect!(1, || reg.read(self).wrapping_add(self.reg_b as u16)),
+			0b1011 => indexed_indirect!(4, || reg.read(self).wrapping_add(self.reg_d())),
+
+			0b1000 => indexed_indirect!(1, || offset_address(reg.read(self), self.take_u8_pc(mem) as i8 as i16)),
+			0b1001 => indexed_indirect!(4, || offset_address(reg.read(self), self.take_u16_pc(mem) as i16)),
+			
+			0b1100 => indexed_indirect!(1, || offset_address(self.reg_pc, self.take_u8_pc(mem) as i8 as i16)),
+			0b1101 => indexed_indirect!(5, || offset_address(self.reg_pc, self.take_u16_pc(mem) as i16)),
+
+			0b1111 => {
+				if !indirect {
+					unreachable!();
+				}
+				(self.take_u16_pc(mem), 5)
+			}
+
+			_ => {
+				panic!("Unknown index postbyte op: {:04b}", index_op);
+			}
+		}
+	}
 
 	fn take_u8_pc(&mut self, mem: &mut Memory) -> u8 {
 		let byte = mem.read_u8(self.reg_pc);
