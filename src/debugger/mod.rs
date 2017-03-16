@@ -7,6 +7,8 @@ use self::command::Command;
 use std::sync::mpsc::Receiver;
 use std::collections::HashSet;
 
+use stupid_debug_line_sink::StupidDebugLineSink;
+
 use mc6809::Mc6809;
 use memory::Memory;
 use vectrex::Vectrex;
@@ -128,7 +130,8 @@ impl Debugger {
 			println!("{}", instr);
 		}
 
-		self.vectrex.step();
+		let mut sink = StupidDebugLineSink {};
+		self.vectrex.step(&mut sink);
 
 		let pc = self.cpu().reg_pc();
 		if self.breakpoints.contains(&pc) {

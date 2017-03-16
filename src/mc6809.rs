@@ -72,8 +72,12 @@ impl Mc6809 {
 		*self = Mc6809::new(mem);
 	}
 
-	pub fn step(&mut self, mem: &mut Memory) -> usize {
+	pub fn step(&mut self, mem: &mut Memory, irq: bool) -> usize {
 		let mut cycles: usize = 0;
+
+		if irq {
+			self.reg_pc = mem.read_u16(0xfff8);
+		}
 
 		let op = mem.read_u8(self.reg_pc);
 		self.reg_pc = self.reg_pc.wrapping_add(1);

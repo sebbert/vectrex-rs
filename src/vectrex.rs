@@ -2,6 +2,7 @@ use motherboard::Motherboard;
 use bios::Bios;
 use cartridge::Cartridge;
 use mc6809::Mc6809;
+use line_sink::LineSink;
 
 pub struct Vectrex {
 	motherboard: Motherboard,
@@ -19,8 +20,10 @@ impl Vectrex {
 		}
 	}
 
-	pub fn step(&mut self) {
-		self.cpu.step(&mut self.motherboard);
+	pub fn step(&mut self, line_sink: &mut LineSink) {
+		let irq = self.motherboard.irq();
+		let cycles = self.cpu.step(&mut self.motherboard, irq);
+		self.motherboard.step_for(cycles, line_sink);
 	}
 
 	pub fn cpu(&self) -> &Mc6809 {

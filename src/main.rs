@@ -14,6 +14,8 @@ mod via;
 mod vectrex;
 mod pack;
 mod debugger;
+mod line_sink;
+mod stupid_debug_line_sink;
 
 use bios::Bios;
 use cartridge::Cartridge;

@@ -4,13 +4,15 @@ use cartridge::Cartridge;
 use sram::Sram;
 use memory::Memory;
 use via::Via;
+use line_sink::LineSink;
 use pack::*;
 
 pub struct Motherboard {
 	bios: Bios,
 	cartridge: Option<Cartridge>,
 	sram: Sram,
-	via: Via
+	via: Via,
+	irq: bool
 }
 
 impl Motherboard {
@@ -19,7 +21,19 @@ impl Motherboard {
 			bios: bios,
 			cartridge: cartridge,
 			sram: Sram::new(),
-			via: Via::new()
+			via: Via::new(),
+			irq: false
+		}
+	}
+
+	pub fn irq(&self) -> bool {
+		self.irq
+	}
+
+	pub fn step_for(&mut self, cycles: usize, line_sink: &mut LineSink) {
+		self.irq = false;
+		for _ in 0..cycles {
+			self.irq |= self.via.step(line_sink);
 		}
 	}
 }
