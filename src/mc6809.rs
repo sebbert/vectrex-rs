@@ -1083,20 +1083,27 @@ impl Mc6809 {
 		pack_u16(hi, lo)
 	}
 
+	fn check_zero_negative_u8(&mut self, value: u8) {
+		self.cc_zero = value == 0;
+		self.cc_negative = (value & 0b1000) == 0b1000;
+	}
+
+	fn check_zero_negative_u16(&mut self, value: u16) {
+		self.cc_zero = value == 0;
+		self.cc_negative = (value & 0b1000_0000) == 0b1000_0000;
+	}
+
 	fn sub_u8_and_set_flags(&mut self, a: u8, b: u8) -> u8 {
 		let (result, carry) = u8::overflowing_sub(a, b);
 		self.cc_carry = carry;
-		self.cc_zero = result == 0;
-		self.cc_negative = (result & 0b1000) == 0b1000;
-		
+		self.check_zero_negative_u8(result);
 		result
 	}
 
 	fn sub_u16_and_set_flags(&mut self, a: u16, b: u16) -> u16 {
 		let (result, carry) = u16::overflowing_sub(a, b);
 		self.cc_carry = carry;
-		self.cc_zero = result == 0;
-		self.cc_negative = (result & 0b1000_0000) == 0b1000_0000;
+		self.check_zero_negative_u16(result);
 
 		result
 	}
