@@ -169,8 +169,7 @@ impl Mc6809 {
 
 		match op {
 			PAGE_2 => {
-				let op = mem.read_u8(self.reg_pc);
-				self.reg_pc = self.reg_pc.wrapping_add(1);
+				let op = self.take_u8_pc(mem);
 			
 				match op {
 					0x83 => immediate16!(Self::instr_cmpd, 5),
@@ -214,8 +213,7 @@ impl Mc6809 {
 				}
 			},
 			PAGE_3 => {
-				let op = mem.read_u8(self.reg_pc);
-				self.reg_pc = self.reg_pc.wrapping_add(1);
+				let op = self.take_u8_pc(mem);
 			
 				match op {
 					0x8c => immediate16!(Self::instr_cmps, 5),
@@ -472,6 +470,20 @@ impl Mc6809 {
 		}
 
 		cycles
+	}
+
+
+	fn take_u8_pc(&mut self, mem: &mut Memory) -> u8 {
+		let byte = mem.read_u8(self.reg_pc);
+		self.reg_pc = self.reg_pc.wrapping_add(1);
+
+		byte
+	}
+	
+	fn take_u16_pc(&mut self, mem: &mut Memory) -> u16 {
+		let hi = self.take_u8_pc(mem);
+		let lo = self.take_u8_pc(mem);
+		pack_u16(hi, lo)
 	}
 
 	fn invalid_opcode(&self, op: u8) {
