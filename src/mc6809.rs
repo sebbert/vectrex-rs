@@ -1249,6 +1249,20 @@ impl Mc6809 {
 		let (result, carry) = u16::overflowing_sub(a, b);
 		self.cc_carry = carry;
 		self.check_zero_negative_u16(result);
+		result
+	}
+
+
+	fn add_u8_and_set_flags(&mut self, a: u8, b: u8) -> u8 {
+		let (result, carry) = u8::overflowing_sub(a, b);
+		self.check_zero_negative_u8(result);
+
+		result
+	}
+
+	fn add_u16_and_set_flags(&mut self, a: u16, b: u16) -> u16 {
+		let (result, carry) = u16::overflowing_sub(a, b);
+		self.check_zero_negative_u16(result);
 
 		result
 	}
