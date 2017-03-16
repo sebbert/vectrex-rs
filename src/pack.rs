@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 #[inline]
 pub fn pack_u16(hi: u8, lo: u8) -> u16 {
 	let hi = hi as u16;
