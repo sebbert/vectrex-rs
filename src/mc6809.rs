@@ -1200,7 +1200,7 @@ impl Mc6809 {
 
 	fn pop_u8(sp: &mut u16, mem: &mut Memory) -> u8 {
 		let value = mem.read_u8(*sp);
-		*sp = sp.checked_sub(1).expect("Stack underflow");
+		*sp = sp.checked_add(1).expect("Stack underflow");
 		value
 	}
 
