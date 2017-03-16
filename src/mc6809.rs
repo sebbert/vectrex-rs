@@ -945,12 +945,22 @@ impl Mc6809 {
 		panic!("Unimplemented instruction DEC");
 	}
 
+	fn instr_eor(&mut self, mem: &mut Memory, addr: u16, value: u8) -> u8 {
+		let value = value ^ mem.read_u8(addr);
+		self.cc_overflow = false;
+		self.check_zero_negative_u8(value);
+
+		value
+	}
+
 	fn instr_eora(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction EORA");
+		let reg = self.reg_a;
+		self.reg_a = self.instr_eor(mem, addr, reg);
 	}
 
 	fn instr_eorb(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction EORB");
+		let reg = self.reg_b;
+		self.reg_b = self.instr_eor(mem, addr, reg);
 	}
 
 	fn instr_inca(&mut self, mem: &mut Memory) {
