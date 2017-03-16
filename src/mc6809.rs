@@ -725,18 +725,27 @@ impl Mc6809 {
 
 	fn instr_bitb(&mut self, mem: &mut Memory, addr: u16) {
 		panic!("Unimplemented instruction BITB");
+	} 
+
+	fn instr_clr_flags(&mut self) {
+		self.check_zero_negative_u8(0);
+		self.cc_overflow = false;
+		self.cc_carry = false;
 	}
 
 	fn instr_clra(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction CLRA");
+		self.instr_clr_flags();
+		self.reg_a = 0;
 	}
 
 	fn instr_clrb(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction CLRB");
+		self.instr_clr_flags();
+		self.reg_b = 0;
 	}
 
 	fn instr_clr(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction CLR");
+		self.instr_clr_flags();
+		mem.write_u8(addr, 0);
 	}
 
 	fn instr_cmpa(&mut self, mem: &mut Memory, addr: u16) {
