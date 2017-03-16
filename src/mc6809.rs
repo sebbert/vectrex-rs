@@ -964,15 +964,19 @@ impl Mc6809 {
 	}
 
 	fn instr_inca(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction INCA");
+		let value = self.reg_a;
+		self.reg_a = self.add_u8_and_set_flags(value, 1);
 	}
 
 	fn instr_incb(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction INCB");
+		let value = self.reg_b;
+		self.reg_b = self.add_u8_and_set_flags(value, 1);
 	}
 
 	fn instr_inc(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction INC");
+		let value = mem.read_u8(addr);
+		let value = self.add_u8_and_set_flags(value, 1);
+		mem.write_u8(addr, value);
 	}
 
 	fn instr_jmp(&mut self, mem: &mut Memory, addr: u16) {
