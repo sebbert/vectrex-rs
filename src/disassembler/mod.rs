@@ -1,5 +1,3 @@
-mod tests;
-
 pub mod instruction;
 pub mod formatting;
 
