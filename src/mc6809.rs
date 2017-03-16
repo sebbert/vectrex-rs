@@ -1032,28 +1032,46 @@ impl Mc6809 {
 		panic!("Unimplemented instruction LEAY");
 	}
 
+	fn instr_st_u8(&mut self, mem: &mut Memory, addr: u16, value: u8) {
+		self.check_zero_negative_u8(value);
+		self.cc_overflow = false;
+		mem.write_u8(addr, value);
+	}
+
+	fn instr_st_u16(&mut self, mem: &mut Memory, addr: u16, value: u16) {
+		self.check_zero_negative_u16(value);
+		self.cc_overflow = false;
+		mem.write_u16(addr, value);
+	}
+
 	fn instr_sta(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction STA");
+		let value = self.reg_a;
+		self.instr_st_u8(mem, addr, value);
 	}
 
 	fn instr_stb(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction STB");
+		let value = self.reg_b;
+		self.instr_st_u8(mem, addr, value);
 	}
 
 	fn instr_std(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction STD");
+		let value = self.reg_d();
+		self.instr_st_u16(mem, addr, value);
 	}
 
 	fn instr_stu(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction STU");
+		let value = self.reg_u;
+		self.instr_st_u16(mem, addr, value);
 	}
 
 	fn instr_stx(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction STX");
+		let value = self.reg_x;
+		self.instr_st_u16(mem, addr, value);
 	}
 
 	fn instr_sty(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction STY");
+		let value = self.reg_y;
+		self.instr_st_u16(mem, addr, value);
 	}
 
 	fn instr_suba(&mut self, mem: &mut Memory, addr: u16) {
