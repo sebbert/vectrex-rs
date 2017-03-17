@@ -983,7 +983,7 @@ impl Mc6809 {
 	}
 
 	fn instr_jmp(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction JMP");
+		self.reg_pc = addr;
 	}
 
 	fn instr_jsr(&mut self, mem: &mut Memory, addr: u16) {
