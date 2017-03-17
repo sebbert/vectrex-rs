@@ -576,10 +576,7 @@ impl Mc6809 {
 			0b1100 => indexed_indirect!(1, || offset_address(self.reg_pc, self.take_u8_pc(mem) as i8 as i16)),
 			0b1101 => indexed_indirect!(5, || offset_address(self.reg_pc, self.take_u16_pc(mem) as i16)),
 
-			0b1111 => {
-				if !indirect {
-					unreachable!();
-				}
+			0b1111 if indirect => {
 				(self.take_u16_pc(mem), 5)
 			}
 
