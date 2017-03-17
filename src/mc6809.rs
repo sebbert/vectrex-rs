@@ -806,7 +806,11 @@ impl Mc6809 {
 	}
 
 	fn instr_mul(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction MUL");
+		let a = self.reg_a as u16;
+		let b = self.reg_b as u16;
+		let result = a * b;
+		self.cc_carry = unpack_flag(result as u8, 7);
+		self.set_reg_d(result);
 	}
 
 
