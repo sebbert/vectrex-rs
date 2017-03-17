@@ -990,32 +990,47 @@ impl Mc6809 {
 		self.reg_pc = addr;
 	}
 
+	fn instr_ld_u8(&mut self, mem: &mut Memory, addr: u16) -> u8 {
+		let value = mem.read_u8(addr);
+		self.check_zero_negative_u8(value);
+		self.cc_carry = false;
+		value
+	}
+
+	fn instr_ld_u16(&mut self, mem: &mut Memory, addr: u16) -> u16 {
+		let value = mem.read_u16(addr);
+		self.check_zero_negative_u16(value);
+		self.cc_carry = false;
+		value
+	}
+
 	fn instr_lda(&mut self, mem: &mut Memory, addr: u16) {
-		self.reg_a = mem.read_u8(addr);
+		self.reg_a = self.instr_ld_u8(mem, addr);
 	}
 
 	fn instr_ldb(&mut self, mem: &mut Memory, addr: u16) {
-		self.reg_b = mem.read_u8(addr);
+		self.reg_b = self.instr_ld_u8(mem, addr);
 	}
 
 	fn instr_ldd(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction LDD");
+		let value = self.instr_ld_u16(mem, addr);
+		self.set_reg_d(value);
 	}
 
-	fn instr_lds(&mut self, mem: &mut Memory, address: u16) {
-		self.reg_s = mem.read_u16(address)
+	fn instr_lds(&mut self, mem: &mut Memory, addr: u16) {
+		self.reg_s = self.instr_ld_u16(mem, addr);
 	}
 
 	fn instr_ldu(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction LDU");
+		self.reg_u = self.instr_ld_u16(mem, addr);
 	}
 
 	fn instr_ldx(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction LDX");
+		self.reg_x = self.instr_ld_u16(mem, addr);
 	}
 
 	fn instr_ldy(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction LDY");
+		self.reg_y = self.instr_ld_u16(mem, addr);
 	}
 
 	fn instr_leas(&mut self, mem: &mut Memory, addr: u16) {
