@@ -842,20 +842,51 @@ impl Mc6809 {
 		panic!("Unimplemented instruction ORCC");
 	}
 
-	fn instr_pshs(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction PSHS");
+	fn instr_psh(&self, mem: &mut Memory, postbyte: u8, sp: &mut u16) {
+		let original_sp = *sp;
+		if unpack_flag(postbyte, 0) { Self::push_u16(sp, mem, self.reg_pc) }
+		if unpack_flag(postbyte, 1) { Self::push_u16(sp, mem, original_sp) }
+		if unpack_flag(postbyte, 2) { Self::push_u16(sp, mem, self.reg_y) }
+		if unpack_flag(postbyte, 3) { Self::push_u16(sp, mem, self.reg_x) }
+		if unpack_flag(postbyte, 4) { Self::push_u8(sp, mem, self.reg_dp) }
+		if unpack_flag(postbyte, 5) { Self::push_u8(sp, mem, self.reg_b) }
+		if unpack_flag(postbyte, 6) { Self::push_u8(sp, mem, self.reg_a) }
+		if unpack_flag(postbyte, 7) { Self::push_u8(sp, mem, self.reg_cc()) }
 	}
 
-	fn instr_pshu(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction PSHU");
+	fn instr_pshs(&mut self, mem: &mut Memory, postbyte: u16) {
+		let mut new_s = self.reg_s;
+		self.instr_psh(mem, postbyte as u8, &mut new_s);
+		self.reg_s = new_s;
+	}
+
+	fn instr_pshu(&mut self, mem: &mut Memory, postbyte: u16) {
+		let mut new_u = self.reg_s;
+		self.instr_psh(mem, postbyte as u8, &mut new_u);
+		self.reg_u = new_u;
+	}
+
+	fn instr_pul(&mut self, mem: &mut Memory, postbyte: u8, sp: &mut u16) {
+		if unpack_flag(postbyte, 7) { self.set_reg_cc(Self::pop_u8(sp, mem)); }
+		if unpack_flag(postbyte, 6) { self.reg_a = Self::pop_u8(sp, mem); }
+		if unpack_flag(postbyte, 5) { self.reg_b = Self::pop_u8(sp, mem); }
+		if unpack_flag(postbyte, 4) { self.reg_dp = Self::pop_u8(sp, mem); }
+		if unpack_flag(postbyte, 3) { self.reg_x = Self::pop_u16(sp, mem); }
+		if unpack_flag(postbyte, 2) { self.reg_y = Self::pop_u16(sp, mem); }
+		if unpack_flag(postbyte, 1) { *sp = Self::pop_u16(sp, mem); }
+		if unpack_flag(postbyte, 0) { self.reg_pc = Self::pop_u16(sp, mem); }
 	}
 
 	fn instr_puls(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction PULS");
+		let mut new_s = self.reg_s;
+		self.instr_pul(mem, addr as u8, &mut new_s);
+		self.reg_s = new_s;
 	}
 
 	fn instr_pulu(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction PULU");
+		let mut new_u = self.reg_u;
+		self.instr_pul(mem, addr as u8, &mut new_u);
+		self.reg_u = new_u;
 	}
 
 	fn instr_rola(&mut self, mem: &mut Memory) {
