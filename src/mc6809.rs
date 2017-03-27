@@ -1098,14 +1098,12 @@ impl Mc6809 {
 	}
 
 	fn instr_st_u8(&mut self, mem: &mut Memory, addr: u16, value: u8) {
-		self.check_zero_negative_u8(value);
-		self.cc_overflow = false;
+		self.check_and_reset_overflow_u8(value);
 		mem.write_u8(addr, value);
 	}
 
 	fn instr_st_u16(&mut self, mem: &mut Memory, addr: u16, value: u16) {
-		self.check_zero_negative_u16(value);
-		self.cc_overflow = false;
+		self.check_and_reset_overflow_u16(value);
 		mem.write_u16(addr, value);
 	}
 
@@ -1313,6 +1311,16 @@ impl Mc6809 {
 		let lo = Self::pop_u8(sp, mem);
 
 		pack_u16(hi, lo)
+	}
+
+	fn check_and_reset_overflow_u8(&mut self, value: u8) {
+		self.cc_overflow = false;
+		self.check_zero_negative_u8(value);
+	}
+	
+	fn check_and_reset_overflow_u16(&mut self, value: u16) {
+		self.cc_overflow = false;
+		self.check_zero_negative_u16(value);
 	}
 
 	fn check_zero_negative_u8(&mut self, value: u8) {
