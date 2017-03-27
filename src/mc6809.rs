@@ -83,10 +83,10 @@ impl Mc6809 {
 		self.reg_pc = self.reg_pc.wrapping_add(1);
 
 		macro_rules! inherent {
-		    ($f:path, $cycles:expr) => ({
-		    	cycles += cycles;
-		    	$f(self, mem);
-		    })
+			($f:path, $cycles:expr) => ({
+				cycles += cycles;
+				$f(self, mem);
+			})
 		}
 
 		macro_rules! immediate8 {
