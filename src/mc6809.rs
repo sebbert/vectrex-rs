@@ -84,7 +84,7 @@ impl Mc6809 {
 
 		macro_rules! inherent {
 			($f:path, $cycles:expr) => ({
-				cycles += cycles;
+				cycles += $cycles;
 				$f(self, mem);
 			})
 		}
