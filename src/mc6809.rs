@@ -140,7 +140,7 @@ impl Mc6809 {
 				
 				let should_branch = $f(self);
 				self.reg_pc = if should_branch {
-					let offset = mem.read_u8(self.reg_pc) as i8 as i16;
+					let offset = self.take_u8_pc(mem) as i8 as i16;
 					offset_address(self.reg_pc, offset)
 				} else {
 					self.reg_pc.wrapping_add(1)
