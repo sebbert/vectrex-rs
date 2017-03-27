@@ -935,12 +935,25 @@ impl Mc6809 {
 		self.reg_pc = Self::pop_u16(&mut self.reg_s, mem);
 	}
 
+	fn instr_sbc(&mut self, mem: &mut Memory, addr: u16, reg: u8) -> u8 {
+		let r = reg as i16;
+		let m = mem.read_u8(addr) as i16;
+		let result = r.wrapping_sub(m).wrapping_sub(self.cc_carry as u8 as i16);
+		
+		self.check_zero_negative_u16(result as u16);
+		self.cc_carry = result < 0;
+		
+		result as u8
+	}
+
 	fn instr_sbca(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction SBCA");
+		let reg = self.reg_a;
+		self.reg_a = self.instr_sbc(mem, addr, reg);
 	}
 
 	fn instr_sbcb(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction SBCB");
+		let reg = self.reg_b;
+		self.reg_b = self.instr_sbc(mem, addr, reg);
 	}
 
 	fn instr_sex(&mut self, mem: &mut Memory) {
