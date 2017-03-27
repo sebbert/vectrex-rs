@@ -1277,15 +1277,17 @@ impl Mc6809 {
 	}
 
 	fn instr_tsta(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction TSTA");
+		let reg = self.reg_a;
+		self.check_and_reset_overflow_u8(reg);
 	}
 
 	fn instr_tstb(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction TSTB");
+		let reg = self.reg_b;
+		self.check_and_reset_overflow_u8(reg);
 	}
 
 	fn instr_tst(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction TST");
+		self.check_and_reset_overflow_u8(mem.read_u8(addr));
 	}
 
 	fn push_u8(sp: &mut u16, mem: &mut Memory, value: u8) {
