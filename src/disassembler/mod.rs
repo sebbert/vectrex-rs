@@ -31,7 +31,7 @@ impl Display for DisassembledInstruction {
 		};
 
 		let hexbytes = fmt_bytes_hex(&self.bytes);
-		write!(f, "{:<20} ; [{:04x}]  {}", instr_fmt, self.address, hexbytes)?;
+		write!(f, "{:04x}:  {:<20}  ; {}", self.address, instr_fmt, hexbytes)?;
 
 		Ok(())
 	}
