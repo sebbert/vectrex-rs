@@ -75,7 +75,7 @@ impl Mc6809 {
 	pub fn step(&mut self, mem: &mut Memory, irq: bool) -> usize {
 		let mut cycles: usize = 0;
 
-		if irq {
+		if irq && self.cc_irq_mask {
 			self.reg_pc = mem.read_u16(0xfff8);
 		}
 
