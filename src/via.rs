@@ -3,10 +3,22 @@
 use pack::*;
 use line_sink::*;
 
-const ADDR_T1_COUNTER_LO: u16 = 4;
-const ADDR_T1_COUNTER_HI: u16 = 5;
-const ADDR_T1_LATCH_LO: u16 = 6;
-const ADDR_T1_LATCH_HI: u16 = 7;
+const REG_IO_B: u16 = 0x0;
+const REG_IO_A: u16 = 0x1;
+const REG_DDRB: u16 = 0x2;
+const REG_DDRA: u16 = 0x3;
+const REG_T1_COUNTER_LO: u16 = 0x4;
+const REG_T1_COUNTER_HI: u16 = 0x5;
+const REG_T1_LATCH_LO: u16 = 0x6;
+const REG_T1_LATCH_HI: u16 = 0x7;
+const REG_T2_LO: u16 = 0x8;
+const REG_T2_HI: u16 = 0x9;
+const REG_SHIFT: u16 = 0xa;
+const REG_ACR: u16 = 0xb;
+const REG_PCR: u16 = 0xc;
+const REG_IFR: u16 = 0xd;
+const REG_IER: u16 = 0xe;
+const REG_IO_A_NO_HANDSHAKE: u16 = 0xf;
 
 #[derive(Default)]
 pub struct Via {
@@ -31,7 +43,7 @@ impl Via {
 		Default::default()	
 	}
 
-	pub fn step(&mut self, line_sink: &mut LineSink) -> bool {
+	pub fn step(&mut self, _: &mut LineSink) -> bool {
 		let next_t1_counter = self.t1_counter().wrapping_sub(1);
 		self.set_t1_counter(next_t1_counter);
 		
@@ -52,13 +64,15 @@ impl Via {
 	pub fn read(&mut self, addr: u16) -> u8 {
 		let addr = Self::mask_addr(addr);
 		match addr {
-			ADDR_T1_COUNTER_LO => {
+			REG_T1_COUNTER_LO => {
 				self.ifr_t1 = false;
 				self.t1_counter_lo
 			}
-			ADDR_T1_COUNTER_HI => self.t1_counter_hi,
-			ADDR_T1_LATCH_LO => self.t1_latch_lo,
-			ADDR_T1_LATCH_HI => self.t1_latch_hi,
+			REG_T1_COUNTER_HI => self.t1_counter_hi,
+			REG_T1_LATCH_LO => self.t1_latch_lo,
+			REG_T1_LATCH_HI => self.t1_latch_hi,
+			REG_IER => self.ier(),
+			REG_IFR => self.ifr(),
 			_ => {
 				error!("Read from unimplemented VIA reg {:01x}", addr);
 				0
@@ -69,19 +83,21 @@ impl Via {
 	pub fn write(&mut self, addr: u16, value: u8) {
 		let addr = Self::mask_addr(addr);
 		match addr {
-			ADDR_T1_COUNTER_LO | ADDR_T1_LATCH_LO => {
+			REG_T1_COUNTER_LO | REG_T1_LATCH_LO => {
 				self.t1_latch_lo = value;
 			},
-			ADDR_T1_LATCH_HI => {
+			REG_T1_LATCH_HI => {
 				self.t1_latch_hi = value;
 			},
-			ADDR_T1_COUNTER_HI => {
+			REG_T1_COUNTER_HI => {
 				self.t1_latch_hi = value;
 				self.t1_counter_hi = self.t1_latch_hi;
 				self.t1_counter_lo = self.t1_latch_lo;
 				self.ifr_t1 = false;
 				self.t1_pb7 = false;
-			}
+			},
+			REG_IER => self.set_ier(value),
+			REG_IFR => self.set_ifr(value),
 
 			_ => warn!("Write to unimplemented VIA reg {:01x} = {:02x}", addr, value)
 		}
@@ -119,12 +135,38 @@ impl Via {
 			self.orb >> 7 == 1
 		}
 	}
+	
+	pub fn set_ifr(&mut self, value: u8) {
+		self.ifr_t1 = unpack_flag(value, 7);
+	}
+	
+	pub fn set_ier(&mut self, value: u8) {
+		self.ier_t1 = unpack_flag(value, 7);
+	}
 
 	pub fn ifr(&self) -> u8 {
-		(self.ifr_t1 as u8) << 7
+		pack_flags([
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			self.ifr_t1
+		])
 	}
 
 	pub fn ier(&self) -> u8 {
-		(self.ier_t1 as u8) << 7
+		pack_flags([
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			false,
+			self.ier_t1
+		])
 	}
 }
