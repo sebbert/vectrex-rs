@@ -991,17 +991,28 @@ impl Mc6809 {
 	fn instr_daa(&mut self, mem: &mut Memory) {
 		panic!("Unimplemented instruction DAA");
 	}
-
+	
+	fn instr_dec_impl(&mut self, value: u8) -> u8 {
+		let result = u8::wrapping_sub(value, 1);
+		self.check_overflow(value, 1, result);
+		self.check_zero_negative_u8(result);
+		
+		result
+	}
+	
 	fn instr_deca(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction DECA");
+		let reg = self.reg_a;
+		self.reg_a = self.instr_dec_impl(reg);
 	}
 
 	fn instr_decb(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction DECB");
+		let reg = self.reg_b;
+		self.reg_b = self.instr_dec_impl(reg);
 	}
 
 	fn instr_dec(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction DEC");
+		let value = mem.read_u8(addr);
+		mem.write_u8(addr, self.instr_dec_impl(value));
 	}
 
 	fn instr_eor(&mut self, mem: &mut Memory, addr: u16, value: u8) -> u8 {
