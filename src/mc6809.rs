@@ -722,12 +722,19 @@ impl Mc6809 {
 		panic!("Unimplemented instruction ASR");
 	}
 
+	fn instr_bit(&mut self, mem: &mut Memory, addr: u16, reg: u8) {
+		let mem = mem.read_u8(addr);
+		self.check_and_reset_overflow_u8(mem & reg);
+	}
+
 	fn instr_bita(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction BITA");
+		let reg = self.reg_a;
+		self.instr_bit(mem, addr, reg);
 	}
 
 	fn instr_bitb(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction BITB");
+		let reg = self.reg_b;
+		self.instr_bit(mem, addr, reg);
 	} 
 
 	fn instr_clr_flags(&mut self) {
