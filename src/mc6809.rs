@@ -820,17 +820,24 @@ impl Mc6809 {
 		self.set_reg_d(result);
 	}
 
+	fn neg_u8_and_set_flags(&mut self, value: u8) -> u8 {
+		self.add_u8_and_set_flags(!value, 1)
+	}
 
 	fn instr_nega(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction NEGA");
+		let reg = self.reg_a;
+		self.reg_a = self.neg_u8_and_set_flags(reg);
 	}
 
 	fn instr_negb(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction NEGB");
+		let reg = self.reg_b;
+		self.reg_b = self.neg_u8_and_set_flags(reg);
 	}
 
 	fn instr_neg(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction NEG");
+		let value = mem.read_u8(addr);
+		let value = self.neg_u8_and_set_flags(value);
+		mem.write_u8(addr, value);
 	}
 
 	fn instr_nop(&mut self, mem: &mut Memory) {
