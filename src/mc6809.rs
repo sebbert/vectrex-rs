@@ -875,7 +875,7 @@ impl Mc6809 {
 	}
 
 	fn instr_pshu(&mut self, mem: &mut Memory, postbyte: u16) {
-		let mut new_u = self.reg_s;
+		let mut new_u = self.reg_u;
 		self.instr_psh(mem, postbyte as u8, &mut new_u);
 		self.reg_u = new_u;
 	}
