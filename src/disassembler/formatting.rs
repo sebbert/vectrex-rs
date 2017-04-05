@@ -20,12 +20,12 @@ fn fmt_indirect<C>(f: &mut Formatter, indirect: bool, callback: C) -> fmt::Resul
 	where C : Fn(&mut Formatter) -> fmt::Result {
 
 	if indirect {
-		try!(write!(f, "["));
-		try!(callback(f));
-		try!(write!(f, "]"));
+		write!(f, "[")?;
+		callback(f)?;
+		write!(f, "]")?;
 	}
 	else {
-		try!(callback(f));
+		callback(f)?;
 	}
 
 	Ok(())
