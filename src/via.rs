@@ -137,24 +137,35 @@ impl Via {
 	}
 	
 	pub fn set_ifr(&mut self, value: u8) {
-		self.ifr_t1 = unpack_flag(value, 7);
+		self.ifr_t1 = unpack_flag(value, 6);
 	}
 	
-	pub fn set_ier(&mut self, value: u8) {
-		self.ier_t1 = unpack_flag(value, 7);
+	pub fn set_ier(&mut self, mut value: u8) {
+		if !unpack_flag(value, 7) {
+			value = !value;
+		}
+		
+		self.ier_t1 = unpack_flag(value, 6);
 	}
 
 	pub fn ifr(&self) -> u8 {
-		pack_flags([
+		let mut ifr = pack_flags([
 			false,
 			false,
 			false,
 			false,
 			false,
 			false,
-			false,
-			self.ifr_t1
-		])
+			self.ifr_t1,
+			false
+		]);
+		
+		// Bit 7 is set whenever any interrupt flag is both active and enabled
+		if (ifr & self.ier()) > 0 {
+			ifr |= 0b1000_0000;
+		}
+		
+		ifr
 	}
 
 	pub fn ier(&self) -> u8 {
@@ -165,8 +176,8 @@ impl Via {
 			false,
 			false,
 			false,
-			false,
-			self.ier_t1
+			self.ier_t1,
+			true
 		])
 	}
 }
