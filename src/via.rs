@@ -21,6 +21,12 @@ const REG_IER: u16 = 0xe;
 const REG_IO_A_NO_HANDSHAKE: u16 = 0xf;
 
 #[derive(Default)]
+pub struct Vec2 {
+	x: i32,
+	y: i32
+}
+
+#[derive(Default)]
 pub struct Via {
 	ier_t1: bool,
 	ifr_t1: bool,
@@ -35,7 +41,9 @@ pub struct Via {
 	t1_pb7: bool,
 	t1_running: bool,
 
-	orb: u8
+	orb: u8,
+	
+	vec_position: Vec2
 }
 
 impl Via {
@@ -43,7 +51,7 @@ impl Via {
 		Default::default()	
 	}
 
-	pub fn step(&mut self, _: &mut LineSink) -> bool {
+	pub fn step(&mut self, line_sink: &mut LineSink) -> bool {
 		let next_t1_counter = self.t1_counter().wrapping_sub(1);
 		self.set_t1_counter(next_t1_counter);
 		
@@ -57,8 +65,14 @@ impl Via {
 				self.t1_running = !self.t1_running;
 			}
 		}
+		
+		self.hardware_step(line_sink);
 
 		self.ier() & self.ifr() != 0
+	}
+	
+	fn hardware_step(&mut self, _: &mut LineSink) {
+		
 	}
 
 	pub fn read(&mut self, addr: u16) -> u8 {
