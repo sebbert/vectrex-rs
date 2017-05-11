@@ -2,6 +2,7 @@
 extern crate log;
 extern crate env_logger;
 
+mod vec2;
 mod cartridge;
 mod bios;
 mod sram;
