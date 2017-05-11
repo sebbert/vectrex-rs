@@ -102,7 +102,7 @@ impl Display for Addressing {
 fn fmt_register_nibble(nibble: u8) -> String {
 	match Register::from_tfr_exg_nibble(nibble) {
 		Some(reg) => format!("{}", reg),
-		None => "?R?".to_string()
+		None => "???".to_string()
 	}
 }
 
