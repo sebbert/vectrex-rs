@@ -42,6 +42,56 @@ pub fn pack_flags(flags: [bool;8]) -> u8 {
 }
 
 #[inline]
-pub fn unpack_flag(value: u8, bit_index: u8) -> bool {
-	1 == (value >> (bit_index & 0x7)) & 1
+pub fn unpack_flag(value: u8, flag_index: usize) -> bool {
+	1 == (value >> (flag_index & 0x7)) & 1
+}
+
+#[inline]
+pub fn set_flag(value: u8, flag_index: usize, flag_value: bool) -> u8 {
+	let flag_index = flag_index & 0x7;
+	let mask = !(1 << flag_index);
+	value & mask | ((flag_value as u8) << flag_index)
+}
+
+pub struct Flag<T:Flags> {
+	value: T,
+	flag_index: usize
+}
+
+impl<T:Flags> Flag<T> {
+	pub fn set(self, value: bool) -> T {
+		self.value.with_flag(self.flag_index, value)
+	}
+	
+	pub fn set_and(mut self, flag_value: bool) -> Self {
+		self.value = self.value.with_flag(self.flag_index, flag_value);
+		self
+	}
+	
+	pub fn get(self) -> bool {
+		self.value.get_flag(self.flag_index)
+	}
+}
+
+pub trait Flags : Sized {
+	fn get_flag(self, flag_index: usize) -> bool;
+	fn with_flag(self, flag_index: usize, flag_value: bool) -> Self;
+	fn flag(self, flag_index: usize) -> Flag<Self>;
+}
+
+impl Flags for u8 {
+	fn get_flag(self, flag_index: usize) -> bool {
+		unpack_flag(self, flag_index)
+	}
+	
+	fn with_flag(self, flag_index: usize, flag_value: bool) -> Self {
+		set_flag(self, flag_index, flag_value)
+	}
+	
+	fn flag(self, flag_index: usize) -> Flag<Self> {
+		Flag {
+			value: self,
+			flag_index: flag_index
+		}
+	}
 }
