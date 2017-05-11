@@ -1,6 +1,8 @@
+use vec2::*;
+
 pub struct Line {
-	pub start: (i8, i8),
-	pub end: (i8, i8),
+	pub start: Vec2,
+	pub end: Vec2,
 	pub brightness: u8
 }
 
