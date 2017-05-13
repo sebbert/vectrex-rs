@@ -724,7 +724,7 @@ impl Mc6809 {
 
 	fn instr_bit(&mut self, mem: &mut Memory, addr: u16, reg: u8) {
 		let mem = mem.read_u8(addr);
-		self.check_and_reset_overflow_u8(mem & reg);
+		self.check_zero_negative_reset_overflow_u8(mem & reg);
 	}
 
 	fn instr_bita(&mut self, mem: &mut Memory, addr: u16) {
@@ -1122,12 +1122,12 @@ impl Mc6809 {
 	}
 
 	fn instr_st_u8(&mut self, mem: &mut Memory, addr: u16, value: u8) {
-		self.check_and_reset_overflow_u8(value);
+		self.check_zero_negative_reset_overflow_u8(value);
 		mem.write_u8(addr, value);
 	}
 
 	fn instr_st_u16(&mut self, mem: &mut Memory, addr: u16, value: u16) {
-		self.check_and_reset_overflow_u16(value);
+		self.check_zero_negative_reset_overflow_u16(value);
 		mem.write_u16(addr, value);
 	}
 
@@ -1302,16 +1302,16 @@ impl Mc6809 {
 
 	fn instr_tsta(&mut self, mem: &mut Memory) {
 		let reg = self.reg_a;
-		self.check_and_reset_overflow_u8(reg);
+		self.check_zero_negative_reset_overflow_u8(reg);
 	}
 
 	fn instr_tstb(&mut self, mem: &mut Memory) {
 		let reg = self.reg_b;
-		self.check_and_reset_overflow_u8(reg);
+		self.check_zero_negative_reset_overflow_u8(reg);
 	}
 
 	fn instr_tst(&mut self, mem: &mut Memory, addr: u16) {
-		self.check_and_reset_overflow_u8(mem.read_u8(addr));
+		self.check_zero_negative_reset_overflow_u8(mem.read_u8(addr));
 	}
 
 	fn push_u8(sp: &mut u16, mem: &mut Memory, value: u8) {
@@ -1339,12 +1339,12 @@ impl Mc6809 {
 		pack_u16(hi, lo)
 	}
 
-	fn check_and_reset_overflow_u8(&mut self, value: u8) {
+	fn check_zero_negative_reset_overflow_u8(&mut self, value: u8) {
 		self.cc_overflow = false;
 		self.check_zero_negative_u8(value);
 	}
 	
-	fn check_and_reset_overflow_u16(&mut self, value: u16) {
+	fn check_zero_negative_reset_overflow_u16(&mut self, value: u16) {
 		self.cc_overflow = false;
 		self.check_zero_negative_u16(value);
 	}
