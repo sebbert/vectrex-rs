@@ -1,8 +1,10 @@
 #![allow(dead_code)]
 
 mod command;
+mod label_registry;
 
-use self::command::Command;
+use self::command::*;
+use self::label_registry::*;
 
 use std::sync::mpsc::Receiver;
 use std::collections::HashSet;
@@ -26,7 +28,19 @@ pub struct Debugger {
 	command_receiver: Receiver<String>,
 	state: State,
 	trace_enabled: bool,
-	breakpoints: HashSet<u16>
+	breakpoints: HashSet<u16>,
+	labels: LabelRegistry
+}
+
+fn print_label(label: &str, address: u16) {
+	println!("{:04x} :{}", address, label);
+}
+
+fn format_address(address: &AddressRef, resolved_address: u16) -> String {
+	match address {
+		&AddressRef::Literal(address) => format!("{:04x}", address),
+		address => format!("{} ({:04x})", address, resolved_address)
+	}
 }
 
 impl Debugger {
@@ -36,7 +50,24 @@ impl Debugger {
 			command_receiver: command_receiver,
 			state: State::Debugging,
 			trace_enabled: false,
-			breakpoints: HashSet::new()
+			breakpoints: HashSet::new(),
+			labels: LabelRegistry::default()
+		}
+	}
+
+	pub fn resolve_address(&self, addr: &AddressRef) -> Option<u16> {
+		let cpu = self.vectrex.cpu();
+		match addr {
+			&AddressRef::Literal(v) => Some(v),
+			&AddressRef::Register(ref r) => Some(match r {
+				&Register::X => cpu.reg_x(),
+				&Register::Y => cpu.reg_y(),
+				&Register::U => cpu.reg_u(),
+				&Register::S => cpu.reg_s(),
+				&Register::PC => cpu.reg_pc(),
+				_ => return None
+			}),
+			&AddressRef::Label(ref label) => self.labels.address_for_label(label)
 		}
 	}
 
@@ -50,6 +81,18 @@ impl Debugger {
 					continue
 				}
 			};
+
+			macro_rules! try_resolve_address {
+				($address:expr) => ({
+					match self.resolve_address($address) {
+						Some(a) => a,
+						None => {
+							println!("Unable to resolve address: {}", $address);
+							return;
+						}
+					}
+				})
+			}
 
 			match cmd {
 				Command::DisplayRegisters => println!("{}", self.cpu()),
@@ -69,8 +112,8 @@ impl Debugger {
 				Command::Quit => {
 					self.state = State::Quitting;
 				},
-				Command::Disassemble { length, address } => {
-					let mut pc = address.unwrap_or(self.cpu().reg_pc());
+				Command::Disassemble { length, ref address } => {
+					let mut pc = try_resolve_address!(address);
 
 					for _ in 0..length {
 						let (next_pc, instr) = disassembler::parse_instruction(self.mem(), pc);
@@ -78,25 +121,70 @@ impl Debugger {
 						pc = next_pc;
 					}
 				},
-				Command::AddBreakpoint { address } => {
-					match self.breakpoints.insert(address) {
-						true => println!("Added breakpoint at {:04x}", address),
-						false => println!("Breakpoint already exists at {:04x}", address)
+				Command::AddBreakpoint { ref address } => {
+					let resolved_address = try_resolve_address!(address);
+					match self.breakpoints.insert(resolved_address) {
+						true => println!("Added breakpoint at {}", format_address(address, resolved_address)),
+						false => println!("Breakpoint already exists at {}", format_address(address, resolved_address))
 					}
 				},
 				Command::DeleteBreakpoint { ref address } => {
-					match self.breakpoints.remove(address) {
-						true => println!("Removed breakpoint at {:04x}", address),
-						false => println!("No breakpoint at {:04x}", address)
+					let resolved_address = try_resolve_address!(address);
+
+					match self.breakpoints.remove(&resolved_address) {
+						true => println!("Removed breakpoint at {}", format_address(address, resolved_address)),
+						false => println!("No breakpoint at {}", format_address(address, resolved_address))
 					}
 				},
 				Command::ListBreakpoints => {
 					println!("Currently active breakpoints:");
 					for addr in &self.breakpoints {
+						let labels_str = self.labels.map.iter()
+							.filter_map(|pair| {
+								let (label, label_addr) = pair;
+								if addr == label_addr {
+									Some(label.as_str())
+								}
+								else { None }
+							})
+							.collect::<Vec<_>>()
+							.join(", ");
+
+						if !labels_str.is_empty() {
+							print!("({}) ", labels_str);
+						}
+
 						println!("{:04x}", addr);
 					}
 				},
+				Command::ListLabels => {
+					for (label, addr) in self.labels.map.iter() {
+						print_label(label, *addr);
+					}
+				},
+				Command::ShowLabel { ref label } => {
+					match self.labels.address_for_label(label) {
+						Some(address) => print_label(label, address),
+						None => println!("Unknown label '{}'", label)
+					}
+				}
+				Command::SetLabel { ref label, ref address } => {
+					let address = try_resolve_address!(address);
+					match self.labels.set_label(label.to_string(), address) {
+						Some(old_addr) => println!(":{} = {:04x} (was {:04x})", label, address, old_addr),
+						None => println!(":{} = {:04x}", label, address)
+					}
+
+				},
+				Command::RemoveLabel { ref label } => {
+					match self.labels.remove_label(label) {
+						Some(addr) => println!("Removed label '{}' ({:04x})", label, addr),
+						None => println!("Unknown label '{}'", label)
+					}
+				},
 				Command::ViewMemory { address, length } => {
+					let address = try_resolve_address!(&address);
+
 					const BYTES_PER_ROW: u8 = 8;
 
 					let mut bytes = Vec::with_capacity(length as _);

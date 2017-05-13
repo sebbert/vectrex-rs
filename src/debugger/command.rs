@@ -1,5 +1,62 @@
 use std::{fmt, u16};
 
+#[derive(Clone, Debug)]
+pub enum Register { A, B, DP, CC, D, X, Y, U, S, PC }
+
+impl Register {
+	pub fn parse(input: &str) -> Option<Register> {
+		Some(match input.to_lowercase().as_ref() {
+			"a" => Register::A,
+			"b" => Register::B,
+			"d" => Register::D,
+			"x" => Register::X,
+			"y" => Register::Y,
+			"u" => Register::U,
+			"s" => Register::S,
+			"dp" => Register::DP,
+			"pc" => Register::PC,
+			"cc" => Register::CC,
+			_ => return None
+		})
+	}
+}
+
+pub enum AddressRef {
+	Literal(u16),
+	Register(Register),
+	Label(String)
+}
+
+impl fmt::Display for AddressRef {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		match self {
+			&AddressRef::Literal(addr) => write!(f, "{:04x}", addr),
+			&AddressRef::Register(ref reg) => write!(f, "[{:?}]", reg),
+			&AddressRef::Label(ref label) => write!(f, ":{}", label)
+		}
+	}
+}
+
+impl AddressRef {
+	pub fn parse(addr: &str) -> Option<AddressRef> {
+		let addr = addr.trim();
+
+		Register::parse(addr).map(|r| AddressRef::Register(r))
+			.or_else(||
+				u16::from_str_radix(addr, 16)
+					.map(|a| AddressRef::Literal(a)).ok()
+			)
+			.or_else(||
+				if addr.starts_with(":") {
+					let mut addr = addr.to_string();
+					addr.remove(0);
+					Some(AddressRef::Label(addr))
+				}
+				else { None }
+			)
+	}
+}
+
 pub enum Command {
 	Quit,
 	Continue,
@@ -8,13 +65,20 @@ pub enum Command {
 	ToggleTrace,
 	Disassemble {
 		length: u16,
-		address: Option<u16>
+		address: AddressRef
 	},
-	AddBreakpoint { address: u16 },
-	DeleteBreakpoint { address: u16 },
+	AddBreakpoint { address: AddressRef },
+	DeleteBreakpoint { address: AddressRef },
 	ListBreakpoints,
+	SetLabel {
+		label: String,
+		address: AddressRef
+	},
+	RemoveLabel { label: String },
+	ShowLabel { label: String },
+	ListLabels,
 	ViewMemory {
-		address: u16,
+		address: AddressRef,
 		length: u16
 	}
 }
@@ -23,7 +87,8 @@ pub enum Command {
 pub enum ParseError {
 	Empty,
 	InvalidCommand(String),
-	MissingArgument(&'static str)
+	InvalidArgument(&'static str),
+	MissingArgument(&'static str),
 }
 
 impl fmt::Display for ParseError {
@@ -31,6 +96,7 @@ impl fmt::Display for ParseError {
     	match self {
     		&ParseError::Empty => Ok(()),
     		&ParseError::InvalidCommand(ref cmd) => write!(f, "{}: Invalid command", cmd),
+    		&ParseError::InvalidArgument(ref argname) => write!(f, "Invalid argument '{}'", argname),
     		&ParseError::MissingArgument(ref argname) => write!(f, "Missing argument '{}'", argname),
     	}
     }
@@ -45,6 +111,14 @@ impl Command {
 			None => return Err(ParseError::Empty)
 		};
 
+		fn parse_address(arg: Option<&str>) -> Result<AddressRef, ParseError> {
+			arg.ok_or(ParseError::MissingArgument("address"))
+				.and_then(|arg|
+					AddressRef::parse(arg)
+						.ok_or(ParseError::InvalidArgument("address"))
+				)
+		}
+
 		match command {
 			"q" | "quit" | "exit" | ":wq" => Ok(Command::Quit),
 			"s" | "step" => Ok(Command::Step),
@@ -52,18 +126,38 @@ impl Command {
 			"c" | "cnt" | "continue" => Ok(Command::Continue),
 			"t" | "trace" => Ok(Command::ToggleTrace),
 			"d" | "dis" | "disassemble" => {
-
-				let address = parse_address(args.next());
-
-				let length = args.next()
-					.and_then(|len| len.parse::<u16>().ok())
-					.unwrap_or(30);
-				
-				Ok(Command::Disassemble {
-					length: length,
-					address: address
-				})
+				parse_address(args.next().or(Some("pc")))
+					.map(|addr| {
+						let length = args.next()
+							.and_then(|len| len.parse::<u16>().ok())
+							.unwrap_or(30);
+						
+						Command::Disassemble {
+							length: length,
+							address: addr
+						}
+					})
 			},
+			"l" | "label" | "labels" => {
+				Ok(match args.next() {
+					Some(arg) => match arg {
+						"ls" => Command::ListLabels,
+						"rm" => match args.next() {
+							Some(label) => Command::RemoveLabel { label: label.to_string() },
+							None => return Err(ParseError::MissingArgument("label"))
+						},
+						label_arg => match args.next() {
+							Some(addr_arg) => return parse_address(Some(addr_arg))
+								.map(|addr| Command::SetLabel {
+									label: label_arg.to_string(),
+									address: addr
+								}),
+							None => Command::ShowLabel { label: label_arg.to_string() }
+						}
+					},
+					None => Command::ListLabels
+				})
+			}
 			"b" | "break" | "breakpoint" => {
 				let arg1 = match args.next() {
 					Some(arg) => arg,
@@ -71,9 +165,9 @@ impl Command {
 				};
 
 				let (is_delete, addr) = match arg1 {
-					"list" | "show" => return Ok(Command::ListBreakpoints),
-					"del" | "delete" => (true, parse_address(args.next())),
-					addr => (false, parse_address(Some(addr)))
+					"ls" => return Ok(Command::ListBreakpoints),
+					"rm" => (true, args.next().and_then(AddressRef::parse)),
+					addr => (false, AddressRef::parse(addr))
 				};
 
 				let addr = match addr {
@@ -98,15 +192,8 @@ impl Command {
 							length: length
 						}
 					})
-					.ok_or(ParseError::MissingArgument("address"))
 			}
 			_ => Err(ParseError::InvalidCommand(command.to_string()))
 		}
 	}
-}
-
-fn parse_address(addr: Option<&str>) -> Option<u16> {
-	addr.map(|a| a.trim())
-		.and_then(|a| if a == "pc" { None } else { Some(a) })
-		.and_then(|a| u16::from_str_radix(a, 16).ok())
 }
