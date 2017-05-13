@@ -41,6 +41,19 @@ pub fn pack_flags(flags: [bool;8]) -> u8 {
 	(flags[7] as u8) << 7
 }
 
+pub fn unpack_flags(value: u8) -> [bool;8] {
+	[
+		value.get_flag(0),
+		value.get_flag(1),
+		value.get_flag(2),
+		value.get_flag(3),
+		value.get_flag(4),
+		value.get_flag(5),
+		value.get_flag(6),
+		value.get_flag(7)
+	]
+}
+
 #[inline]
 pub fn unpack_flag(value: u8, flag_index: usize) -> bool {
 	1 == (value >> (flag_index & 0x7)) & 1

@@ -106,6 +106,36 @@ fn fmt_tfr_exg_nibble(nibble: u8) -> String {
 	}
 }
 
+enum StackPtrReg { S, U }
+
+fn fmt_psh_pul_postbyte(postbyte: u8, stack_ptr_reg: StackPtrReg) -> String {
+	let result = String::new();
+	let regs = unpack_flags(postbyte);
+
+	regs.iter()
+		.enumerate()
+		.filter_map(|e| {
+			let (index, enabled) = e;
+			if !enabled { return None }
+			Some(match index {
+				0 => "CC",
+				1 => "A",
+				2 => "B",
+				3 => "DP",
+				4 => "X",
+				5 => "Y",
+				6 => match stack_ptr_reg {
+					StackPtrReg::S => "S",
+					StackPtrReg::U => "U"
+				},
+				7 => "PC",
+				_ => return None
+			})
+		})
+		.collect::<Vec<_>>()
+		.join(",")
+}
+
 impl Display for Instruction {
 	fn fmt(&self, f: &mut Formatter) -> fmt::Result {
 		let &Instruction(ref mnemonic, _) = self;
@@ -115,6 +145,14 @@ impl Display for Instruction {
 			&Instruction(Mnemonic::Exg, Addressing::Immediate8(postbyte)) => {
 				let (reg_a, reg_b) = unpack_nibbles(postbyte);
 				format!("{},{}", fmt_tfr_exg_nibble(reg_a), fmt_tfr_exg_nibble(reg_b))
+			},
+			&Instruction(Mnemonic::Pshu, Addressing::Immediate8(postbyte)) |
+			&Instruction(Mnemonic::Pulu, Addressing::Immediate8(postbyte)) => {
+				fmt_psh_pul_postbyte(postbyte, StackPtrReg::U)
+			},
+			&Instruction(Mnemonic::Pshs, Addressing::Immediate8(postbyte)) |
+			&Instruction(Mnemonic::Puls, Addressing::Immediate8(postbyte)) => {
+				fmt_psh_pul_postbyte(postbyte, StackPtrReg::S)
 			},
 			&Instruction(_, ref addressing) => {
 				format!("{}", addressing)
