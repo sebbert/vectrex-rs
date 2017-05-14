@@ -322,10 +322,8 @@ impl Via {
 			false
 		]);
 		
-		ifr &= self.ier();
-
 		// Bit 7 is set whenever any interrupt flag is both active and enabled
-		if ifr != 0 {
+		if (ifr & self.ier()) != 0 {
 			ifr |= 0b1000_0000;
 		}
 		
