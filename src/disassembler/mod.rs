@@ -5,7 +5,7 @@ pub use self::instruction::{Instruction, Mnemonic, Addressing, IndexMode, Regist
 pub use self::formatting::*;
 
 use std::fmt::{self, Display, Formatter};
-use pack::unpack_u16;
+use pack::unpack_16;
 use memory::Memory;
 
 pub struct DisassembledInstruction {
@@ -60,18 +60,18 @@ impl<'a> InstructionParser<'a> {
 		}
 	}
 
-	fn take_u8(&mut self) -> u8 {
-		let value = self.memory.read_u8(self.addr);
+	fn take_8(&mut self) -> u8 {
+		let value = self.memory.read_8(self.addr);
 		self.bytes.push(value);
 		self.addr = self.addr.wrapping_add(1);
 
 		value
 	}
 
-	fn take_u16(&mut self) -> u16 {
-		let value = self.memory.read_u16(self.addr);
+	fn take_16(&mut self) -> u16 {
+		let value = self.memory.read_16(self.addr);
 		
-		let (hi, lo) = unpack_u16(value); 
+		let (hi, lo) = unpack_16(value); 
 		self.bytes.push(hi);
 		self.bytes.push(lo);
 
@@ -81,27 +81,27 @@ impl<'a> InstructionParser<'a> {
 	}
 
 	fn parse_immediate8(&mut self) -> Addressing {
-		Addressing::Immediate8(self.take_u8())
+		Addressing::Immediate8(self.take_8())
 	}
 
 	fn parse_immediate16(&mut self) -> Addressing {
-		Addressing::Immediate16(self.take_u16())
+		Addressing::Immediate16(self.take_16())
 	}
 
 	fn parse_relative8(&mut self) -> Addressing {
-		Addressing::Relative8(self.take_u8() as i8)
+		Addressing::Relative8(self.take_8() as i8)
 	}
 
 	fn parse_relative16(&mut self) -> Addressing {
-		Addressing::Relative16(self.take_u16() as i16)
+		Addressing::Relative16(self.take_16() as i16)
 	}
 
 	fn parse_direct(&mut self) -> Addressing {
-		Addressing::Direct(self.take_u8())
+		Addressing::Direct(self.take_8())
 	}
 
 	fn parse_extended(&mut self) -> Addressing {
-		Addressing::Extended(self.take_u16())
+		Addressing::Extended(self.take_16())
 	}
 
 	fn parse_indexed(&mut self) -> Addressing {
@@ -109,7 +109,7 @@ impl<'a> InstructionParser<'a> {
 	}
 
 	fn parse_index_mode(&mut self) -> IndexMode {
-		let postbyte = self.take_u8();
+		let postbyte = self.take_8();
 
 		let reg_nibble = (postbyte & 0b0110_0000) >> 5;
 		let reg = Register::from_indexed_halfnibble(reg_nibble);
@@ -148,26 +148,26 @@ impl<'a> InstructionParser<'a> {
 
 			0b1000 => IndexMode::Offset8 {
 				reg: reg.unwrap(),
-				offset: self.take_u8() as i8,
+				offset: self.take_8() as i8,
 				indirect: indirect
 			},
 			0b1001 => IndexMode::Offset16 {
 				reg: reg.unwrap(),
-				offset: self.take_u16() as i16,
+				offset: self.take_16() as i16,
 				indirect: indirect
 			},
 
 			0b1100 => IndexMode::PcOffset8 {
-				offset: self.take_u8() as i8,
+				offset: self.take_8() as i8,
 				indirect: indirect
 			},
 			0b1101 => IndexMode::PcOffset16 {
-				offset: self.take_u16() as i16,
+				offset: self.take_16() as i16,
 				indirect: indirect
 			},
 
 			0b1111 => IndexMode::ExtendedIndirect {
-				address: self.take_u16(),
+				address: self.take_16(),
 			},
 
 			_ => {
@@ -182,11 +182,11 @@ impl<'a> InstructionParser<'a> {
 		const PAGE_2: u8 = 0x10;
 		const PAGE_3: u8 = 0x11;
 
-		let op = self.take_u8();
+		let op = self.take_8();
 		
 		let instr = match op {
 			PAGE_2 => {
-				let op = self.take_u8();
+				let op = self.take_8();
 				
 				match op {
 					0x83 => instr(Mnemonic::Cmpd, self.parse_immediate16()),
@@ -229,7 +229,7 @@ impl<'a> InstructionParser<'a> {
 				}
 			},
 			PAGE_3 => {
-				let op = self.take_u8();
+				let op = self.take_8();
 
 				match op {
 					0x8c => instr(Mnemonic::Cmps, self.parse_immediate16()),

@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 #[inline]
-pub fn pack_u16(hi: u8, lo: u8) -> u16 {
+pub fn pack_16(hi: u8, lo: u8) -> u16 {
 	let hi = hi as u16;
 	let lo = lo as u16;
 
@@ -9,7 +9,7 @@ pub fn pack_u16(hi: u8, lo: u8) -> u16 {
 }
 
 #[inline]
-pub fn unpack_u16(value: u16) -> (u8, u8) {
+pub fn unpack_16(value: u16) -> (u8, u8) {
 	let hi = (value >> 8) as u8;
 	let lo = value as u8;
 

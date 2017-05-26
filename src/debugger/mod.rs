@@ -189,7 +189,7 @@ impl Debugger {
 
 					let mut bytes = Vec::with_capacity(length as _);
 					for i in 0..length {
-						let byte = self.mem().read_u8(address.wrapping_add(i));
+						let byte = self.mem().read_8(address.wrapping_add(i));
 						bytes.push(byte);
 					}
 

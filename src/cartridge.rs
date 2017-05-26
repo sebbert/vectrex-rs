@@ -24,7 +24,7 @@ impl Cartridge {
 		})
 	}
 
-	pub fn read_u8(&self, addr: u16) -> u8 {
+	pub fn read_8(&self, addr: u16) -> u8 {
 		let addr = addr & 0x7fff;
 		unsafe {
 			*self.bytes_ptr.offset(addr as _)

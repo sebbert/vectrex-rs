@@ -221,21 +221,21 @@ impl Via {
 	}
 
 	fn t1_counter(&self) -> u16 {
-		pack_u16(self.t1_counter_hi, self.t1_counter_lo)
+		pack_16(self.t1_counter_hi, self.t1_counter_lo)
 	}
 
 	fn t1_latch(&self) -> u16 {
-		pack_u16(self.t1_latch_hi, self.t1_latch_lo)
+		pack_16(self.t1_latch_hi, self.t1_latch_lo)
 	}
 
 	fn set_t1_counter(&mut self, value: u16) {
-		let (hi, lo) = unpack_u16(value);
+		let (hi, lo) = unpack_16(value);
 		self.t1_counter_hi = hi;
 		self.t1_counter_lo = lo;
 	}
 
 	fn set_t1_latch(&mut self, value: u16) {
-		let (hi, lo) = unpack_u16(value);
+		let (hi, lo) = unpack_16(value);
 		self.t1_latch_hi = hi;
 		self.t1_latch_lo = lo;
 	}

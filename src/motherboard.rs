@@ -39,11 +39,11 @@ impl Motherboard {
 }
 
 impl Memory for Motherboard {
-	fn read_u8(&mut self, addr: u16) -> u8 {
+	fn read_8(&mut self, addr: u16) -> u8 {
 		match addr {
 			CARTRIDGE_START ... CARTRIDGE_END => {
 				match self.cartridge {
-					Some(ref cartridge) => cartridge.read_u8(addr - CARTRIDGE_START),
+					Some(ref cartridge) => cartridge.read_8(addr - CARTRIDGE_START),
 					None => {
 						warn!("Read from non-existent cartridge (at 0x{:04x})", addr);
 						0
@@ -51,10 +51,10 @@ impl Memory for Motherboard {
 				}
 			}
 			BIOS_START ... BIOS_END => {
-				self.bios.read_u8(addr - BIOS_START)
+				self.bios.read_8(addr - BIOS_START)
 			}
 			SRAM_START ... SRAM_END => {
-				self.sram.read_u8(addr - SRAM_START)
+				self.sram.read_8(addr - SRAM_START)
 			}
 			VIA_START ... VIA_END => {
 				self.via.read(addr)
@@ -63,7 +63,7 @@ impl Memory for Motherboard {
 		}
 	}
 	
-	fn write_u8(&mut self, addr: u16, value: u8) {
+	fn write_8(&mut self, addr: u16, value: u8) {
 		match addr {
 			CARTRIDGE_START ... CARTRIDGE_END => {
 				warn!("Attempted write to cartridge ROM");
@@ -72,7 +72,7 @@ impl Memory for Motherboard {
 				warn!("Attempted write to BIOS");
 			}
 			SRAM_START ... SRAM_END => {
-				self.sram.write_u8(addr - SRAM_START, value)
+				self.sram.write_8(addr - SRAM_START, value)
 			}
 			VIA_START ... VIA_END => {
 				self.via.write(addr, value)
@@ -81,17 +81,17 @@ impl Memory for Motherboard {
 		}
 	}
 
-	fn read_u16(&mut self, addr: u16) -> u16 {
-		let hi = self.read_u8(addr);
-		let lo = self.read_u8(addr + 1);
+	fn read_16(&mut self, addr: u16) -> u16 {
+		let hi = self.read_8(addr);
+		let lo = self.read_8(addr + 1);
 
-		pack_u16(hi, lo)
+		pack_16(hi, lo)
 	}
 
-	fn write_u16(&mut self, addr: u16, value: u16) {
-		let (hi, lo) = unpack_u16(value);
+	fn write_16(&mut self, addr: u16, value: u16) {
+		let (hi, lo) = unpack_16(value);
 
-		self.write_u8(addr, hi);
-		self.write_u8(addr + 1, lo);
+		self.write_8(addr, hi);
+		self.write_8(addr + 1, lo);
 	}
 }

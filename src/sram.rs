@@ -11,11 +11,11 @@ impl Sram {
 		}
 	}
 
-	pub fn read_u8(&self, addr: u16) -> u8 {
+	pub fn read_8(&self, addr: u16) -> u8 {
 		self.bytes[addr as usize]
 	}
 
-	pub fn write_u8(&mut self, addr: u16, value: u8) {
+	pub fn write_8(&mut self, addr: u16, value: u8) {
 		self.bytes[addr as usize] = value;
 	}
 }

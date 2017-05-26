@@ -63,7 +63,7 @@ impl Mc6809 {
 		cpu.cc_irq_mask = true;
 		cpu.cc_firq_mask = true;
 		
-		cpu.reg_pc = mem.read_u16(0xfffe);
+		cpu.reg_pc = mem.read_16(0xfffe);
 
 		cpu
 	}
@@ -76,10 +76,10 @@ impl Mc6809 {
 		let mut cycles: usize = 0;
 
 		if irq && self.cc_irq_mask {
-			self.reg_pc = mem.read_u16(0xfff8);
+			self.reg_pc = mem.read_16(0xfff8);
 		}
 
-		let op = mem.read_u8(self.reg_pc);
+		let op = mem.read_8(self.reg_pc);
 		self.reg_pc = self.reg_pc.wrapping_add(1);
 
 		macro_rules! inherent {
@@ -109,8 +109,8 @@ impl Mc6809 {
 
 		macro_rules! direct {
 			($f:path, $cycles:expr) => ({
-				let addr_lo = mem.read_u8(self.reg_pc);
-				let addr = pack_u16(self.reg_dp, addr_lo);
+				let addr_lo = mem.read_8(self.reg_pc);
+				let addr = pack_16(self.reg_dp, addr_lo);
 				self.reg_pc = self.reg_pc.wrapping_add(1);
 				cycles += $cycles;
 				$f(self, mem, addr)
@@ -119,7 +119,7 @@ impl Mc6809 {
 
 		macro_rules! extended {
 			($f:path, $cycles:expr) => ({
-				let addr = mem.read_u16(self.reg_pc);
+				let addr = mem.read_16(self.reg_pc);
 				self.reg_pc = self.reg_pc.wrapping_add(2);
 				cycles += $cycles;
 				$f(self, mem, addr)
@@ -140,7 +140,7 @@ impl Mc6809 {
 				
 				let should_branch = $f(self);
 				self.reg_pc = if should_branch {
-					let offset = self.take_u8_pc(mem) as i8 as i16;
+					let offset = self.take_8_pc(mem) as i8 as i16;
 					offset_address(self.reg_pc, offset)
 				} else {
 					self.reg_pc.wrapping_add(1)
@@ -155,7 +155,7 @@ impl Mc6809 {
 				self.reg_pc = if should_branch
 				{
 					cycles += $cycles_if_branch;
-					let offset = mem.read_u16(self.reg_pc) as i16;
+					let offset = mem.read_16(self.reg_pc) as i16;
 					offset_address(self.reg_pc, offset)
 					
 				} else {
@@ -172,7 +172,7 @@ impl Mc6809 {
 
 		match op {
 			PAGE_2 => {
-				let op = self.take_u8_pc(mem);
+				let op = self.take_8_pc(mem);
 			
 				match op {
 					0x83 => immediate16!(Self::instr_cmpd, 5),
@@ -218,7 +218,7 @@ impl Mc6809 {
 				}
 			},
 			PAGE_3 => {
-				let op = self.take_u8_pc(mem);
+				let op = self.take_8_pc(mem);
 			
 				match op {
 					0x8c => immediate16!(Self::instr_cmps, 5),
@@ -258,8 +258,8 @@ impl Mc6809 {
 				cycles += 9;
 
 				let (imm_size, addr_offset) = match op {
-					0x8d => (1, mem.read_u8(self.reg_pc) as i8 as i16),
-					_    => (2, mem.read_u16(self.reg_pc) as i16)
+					0x8d => (1, mem.read_8(self.reg_pc) as i8 as i16),
+					_    => (2, mem.read_16(self.reg_pc) as i16)
 				};
 
 				self.reg_pc = self.reg_pc.wrapping_add(imm_size);
@@ -482,7 +482,7 @@ impl Mc6809 {
 	/// Returns a tuple of the form (effective_address, cycles)
 	fn parse_indexed(&mut self, mem: &mut Memory) -> (u16, usize) {
 
-		let postbyte = self.take_u8_pc(mem);
+		let postbyte = self.take_8_pc(mem);
 
 		let indirect = (postbyte >> 4) & 1 == 1;
 
@@ -492,7 +492,7 @@ impl Mc6809 {
 				let mut cycles = $cycles;
 
 				if indirect {
-					addr = mem.read_u16(addr);
+					addr = mem.read_16(addr);
 					cycles += 3;
 				}
 
@@ -572,13 +572,13 @@ impl Mc6809 {
 			0b0101 => indexed_indirect!(1, || reg.read(self).wrapping_add(self.reg_b as u16)),
 			0b1011 => indexed_indirect!(4, || reg.read(self).wrapping_add(self.reg_d())),
 
-			0b1000 => indexed_indirect!(1, || offset_address(reg.read(self), self.take_u8_pc(mem) as i8 as i16)),
-			0b1001 => indexed_indirect!(4, || offset_address(reg.read(self), self.take_u16_pc(mem) as i16)),
+			0b1000 => indexed_indirect!(1, || offset_address(reg.read(self), self.take_8_pc(mem) as i8 as i16)),
+			0b1001 => indexed_indirect!(4, || offset_address(reg.read(self), self.take_16_pc(mem) as i16)),
 			
-			0b1100 => indexed_indirect!(1, || offset_address(self.reg_pc, self.take_u8_pc(mem) as i8 as i16)),
-			0b1101 => indexed_indirect!(5, || offset_address(self.reg_pc, self.take_u16_pc(mem) as i16)),
+			0b1100 => indexed_indirect!(1, || offset_address(self.reg_pc, self.take_8_pc(mem) as i8 as i16)),
+			0b1101 => indexed_indirect!(5, || offset_address(self.reg_pc, self.take_16_pc(mem) as i16)),
 
-			0b1111 if indirect => (self.take_u16_pc(mem), 5),
+			0b1111 if indirect => (self.take_16_pc(mem), 5),
 			
 			_ => {
 				panic!("Unknown index postbyte op: {:04b}", index_op);
@@ -586,17 +586,17 @@ impl Mc6809 {
 		}
 	}
 
-	fn take_u8_pc(&mut self, mem: &mut Memory) -> u8 {
-		let byte = mem.read_u8(self.reg_pc);
+	fn take_8_pc(&mut self, mem: &mut Memory) -> u8 {
+		let byte = mem.read_8(self.reg_pc);
 		self.reg_pc = self.reg_pc.wrapping_add(1);
 
 		byte
 	}
 	
-	fn take_u16_pc(&mut self, mem: &mut Memory) -> u16 {
-		let hi = self.take_u8_pc(mem);
-		let lo = self.take_u8_pc(mem);
-		pack_u16(hi, lo)
+	fn take_16_pc(&mut self, mem: &mut Memory) -> u16 {
+		let hi = self.take_8_pc(mem);
+		let lo = self.take_8_pc(mem);
+		pack_16(hi, lo)
 	}
 
 	fn invalid_opcode(&self, op: u8) {
@@ -686,16 +686,27 @@ impl Mc6809 {
 		panic!("Unimplemented instruction ADDD");
 	}
 
+	fn and(&mut self, a: u8, b: u8) -> u8 {
+		let result = a & b;
+		self.check_zero_negative_reset_overflow_8(result);
+		result
+	}
+
 	fn instr_anda(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction ANDA");
+		let reg = self.reg_a;
+		let result = self.and(reg, mem.read_8(addr));
+		self.reg_a = result;
 	}
 
 	fn instr_andb(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction ANDB");
+		let reg = self.reg_a;
+		let result = self.and(reg, mem.read_8(addr));
+		self.reg_a = result;
 	}
 
 	fn instr_andcc(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction ANDCC");
+		let value = self.reg_cc() & mem.read_8(addr);
+		self.set_reg_cc(value);
 	}
 
 	fn instr_asla(&mut self, mem: &mut Memory) {
@@ -723,8 +734,8 @@ impl Mc6809 {
 	}
 
 	fn instr_bit(&mut self, mem: &mut Memory, addr: u16, reg: u8) {
-		let mem = mem.read_u8(addr);
-		self.check_zero_negative_reset_overflow_u8(mem & reg);
+		let mem = mem.read_8(addr);
+		self.check_zero_negative_reset_overflow_8(mem & reg);
 	}
 
 	fn instr_bita(&mut self, mem: &mut Memory, addr: u16) {
@@ -738,7 +749,7 @@ impl Mc6809 {
 	} 
 
 	fn instr_clr_flags(&mut self) {
-		self.check_zero_negative_u8(0);
+		self.check_zero_negative_8(0);
 		self.cc_overflow = false;
 		self.cc_carry = false;
 	}
@@ -755,49 +766,50 @@ impl Mc6809 {
 
 	fn instr_clr(&mut self, mem: &mut Memory, addr: u16) {
 		self.instr_clr_flags();
-		mem.write_u8(addr, 0);
+		mem.write_8(addr, 0);
 	}
 
 	fn instr_cmpa(&mut self, mem: &mut Memory, addr: u16) {
-		let mem = mem.read_u8(addr);
+		let mem = mem.read_8(addr);
 		let reg = self.reg_a();
-		self.sub_u8_and_set_flags(mem, reg);
+		self.sub_8_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmpb(&mut self, mem: &mut Memory, addr: u16) {
-		let mem = mem.read_u8(addr);
+		let mem = mem.read_8(addr);
 		let reg = self.reg_b();
-		self.sub_u8_and_set_flags(mem, reg);
+		self.sub_8_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmpd(&mut self, mem: &mut Memory, addr: u16) {
-		let mem = mem.read_u16(addr);
+		let mem = mem.read_16(addr);
 		let reg = self.reg_d();
-		self.sub_u16_and_set_flags(mem, reg);
+		self.sub_16_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmps(&mut self, mem: &mut Memory, addr: u16) {
-		let mem = mem.read_u16(addr);
+		let mem = mem.read_16(addr);
 		let reg = self.reg_s();
-		self.sub_u16_and_set_flags(mem, reg);
+		self.sub_16_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmpu(&mut self, mem: &mut Memory, addr: u16) {
-		let mem = mem.read_u16(addr);
+		let mem = mem.read_16(addr);
 		let reg = self.reg_u();
-		self.sub_u16_and_set_flags(mem, reg);
+		self.sub_16_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmpx(&mut self, mem: &mut Memory, addr: u16) {
-		let mem = mem.read_u16(addr);
+		let mem = mem.read_16(addr);
 		let reg = self.reg_x();
-		self.sub_u16_and_set_flags(mem, reg);
+		self.sub_16_and_set_flags(mem, reg);
 	}
 
 	fn instr_cmpy(&mut self, mem: &mut Memory, addr: u16) {
-		let mem = mem.read_u16(addr);
+		let mem = mem.read_16(addr);
 		let reg = self.reg_y();
-		self.sub_u16_and_set_flags(mem, reg);
+		self.sub_16_and_set_flags(mem, reg);
+	}
 	}
 
 	fn instr_lsra(&mut self, mem: &mut Memory) {
@@ -820,24 +832,24 @@ impl Mc6809 {
 		self.set_reg_d(result);
 	}
 
-	fn neg_u8_and_set_flags(&mut self, value: u8) -> u8 {
-		self.add_u8_and_set_flags(!value, 1)
+	fn neg_8_and_set_flags(&mut self, value: u8) -> u8 {
+		self.add_8_and_set_flags(!value, 1)
 	}
 
 	fn instr_nega(&mut self, mem: &mut Memory) {
 		let reg = self.reg_a;
-		self.reg_a = self.neg_u8_and_set_flags(reg);
+		self.reg_a = self.neg_8_and_set_flags(reg);
 	}
 
 	fn instr_negb(&mut self, mem: &mut Memory) {
 		let reg = self.reg_b;
-		self.reg_b = self.neg_u8_and_set_flags(reg);
+		self.reg_b = self.neg_8_and_set_flags(reg);
 	}
 
 	fn instr_neg(&mut self, mem: &mut Memory, addr: u16) {
-		let value = mem.read_u8(addr);
-		let value = self.neg_u8_and_set_flags(value);
-		mem.write_u8(addr, value);
+		let value = mem.read_8(addr);
+		let value = self.neg_8_and_set_flags(value);
+		mem.write_8(addr, value);
 	}
 
 	fn instr_nop(&mut self, mem: &mut Memory) {
@@ -845,11 +857,11 @@ impl Mc6809 {
 	}
 
 	fn instr_ora(&mut self, mem: &mut Memory, addr: u16) {
-		self.reg_a |= mem.read_u8(addr);
+		self.reg_a |= mem.read_8(addr);
 	}
 
 	fn instr_orb(&mut self, mem: &mut Memory, addr: u16) {
-		self.reg_b |= mem.read_u8(addr);
+		self.reg_b |= mem.read_8(addr);
 	}
 
 	fn instr_orcc(&mut self, mem: &mut Memory, addr: u16) {
@@ -858,14 +870,14 @@ impl Mc6809 {
 
 	fn instr_psh(&self, mem: &mut Memory, postbyte: u8, sp: &mut u16) {
 		let original_sp = *sp;
-		if unpack_flag(postbyte, 7) { Self::push_u16(sp, mem, self.reg_pc) }
-		if unpack_flag(postbyte, 6) { Self::push_u16(sp, mem, original_sp) }
-		if unpack_flag(postbyte, 5) { Self::push_u16(sp, mem, self.reg_y) }
-		if unpack_flag(postbyte, 4) { Self::push_u16(sp, mem, self.reg_x) }
-		if unpack_flag(postbyte, 3) { Self::push_u8(sp, mem, self.reg_dp) }
-		if unpack_flag(postbyte, 2) { Self::push_u8(sp, mem, self.reg_b) }
-		if unpack_flag(postbyte, 1) { Self::push_u8(sp, mem, self.reg_a) }
-		if unpack_flag(postbyte, 0) { Self::push_u8(sp, mem, self.reg_cc()) }
+		if unpack_flag(postbyte, 7) { Self::push_16(sp, mem, self.reg_pc) }
+		if unpack_flag(postbyte, 6) { Self::push_16(sp, mem, original_sp) }
+		if unpack_flag(postbyte, 5) { Self::push_16(sp, mem, self.reg_y) }
+		if unpack_flag(postbyte, 4) { Self::push_16(sp, mem, self.reg_x) }
+		if unpack_flag(postbyte, 3) { Self::push_8(sp, mem, self.reg_dp) }
+		if unpack_flag(postbyte, 2) { Self::push_8(sp, mem, self.reg_b) }
+		if unpack_flag(postbyte, 1) { Self::push_8(sp, mem, self.reg_a) }
+		if unpack_flag(postbyte, 0) { Self::push_8(sp, mem, self.reg_cc()) }
 	}
 
 	fn instr_pshs(&mut self, mem: &mut Memory, postbyte: u16) {
@@ -881,14 +893,14 @@ impl Mc6809 {
 	}
 
 	fn instr_pul(&mut self, mem: &mut Memory, postbyte: u8, sp: &mut u16) {
-		if unpack_flag(postbyte, 0) { self.set_reg_cc(Self::pop_u8(sp, mem)); }
-		if unpack_flag(postbyte, 1) { self.reg_a = Self::pop_u8(sp, mem); }
-		if unpack_flag(postbyte, 2) { self.reg_b = Self::pop_u8(sp, mem); }
-		if unpack_flag(postbyte, 3) { self.reg_dp = Self::pop_u8(sp, mem); }
-		if unpack_flag(postbyte, 4) { self.reg_x = Self::pop_u16(sp, mem); }
-		if unpack_flag(postbyte, 5) { self.reg_y = Self::pop_u16(sp, mem); }
-		if unpack_flag(postbyte, 6) { *sp = Self::pop_u16(sp, mem); }
-		if unpack_flag(postbyte, 7) { self.reg_pc = Self::pop_u16(sp, mem); }
+		if unpack_flag(postbyte, 0) { self.set_reg_cc(Self::pop_8(sp, mem)); }
+		if unpack_flag(postbyte, 1) { self.reg_a = Self::pop_8(sp, mem); }
+		if unpack_flag(postbyte, 2) { self.reg_b = Self::pop_8(sp, mem); }
+		if unpack_flag(postbyte, 3) { self.reg_dp = Self::pop_8(sp, mem); }
+		if unpack_flag(postbyte, 4) { self.reg_x = Self::pop_16(sp, mem); }
+		if unpack_flag(postbyte, 5) { self.reg_y = Self::pop_16(sp, mem); }
+		if unpack_flag(postbyte, 6) { *sp = Self::pop_16(sp, mem); }
+		if unpack_flag(postbyte, 7) { self.reg_pc = Self::pop_16(sp, mem); }
 	}
 
 	fn instr_puls(&mut self, mem: &mut Memory, addr: u16) {
@@ -932,15 +944,15 @@ impl Mc6809 {
 	}
 
 	fn instr_rts(&mut self, mem: &mut Memory) {
-		self.reg_pc = Self::pop_u16(&mut self.reg_s, mem);
+		self.reg_pc = Self::pop_16(&mut self.reg_s, mem);
 	}
 
 	fn instr_sbc(&mut self, mem: &mut Memory, addr: u16, reg: u8) -> u8 {
 		let r = reg as i16;
-		let m = mem.read_u8(addr) as i16;
+		let m = mem.read_8(addr) as i16;
 		let result = r.wrapping_sub(m).wrapping_sub(self.cc_carry as u8 as i16);
 		
-		self.check_zero_negative_u16(result as u16);
+		self.check_zero_negative_16(result as u16);
 		self.cc_carry = result < 0;
 		
 		result as u8
@@ -982,8 +994,8 @@ impl Mc6809 {
 	}
 
 	fn instr_com(&mut self, mem: &mut Memory, addr: u16) {
-		let value = mem.read_u8(addr);
-		mem.write_u8(addr, self.com_and_set_flags(value));
+		let value = mem.read_8(addr);
+		mem.write_8(addr, self.com_and_set_flags(value));
 	}
 
 	fn instr_cwai(&mut self, mem: &mut Memory, addr: u16) {
@@ -997,7 +1009,7 @@ impl Mc6809 {
 	fn instr_dec_impl(&mut self, value: u8) -> u8 {
 		let result = u8::wrapping_sub(value, 1);
 		self.check_overflow(value, 1, result);
-		self.check_zero_negative_u8(result);
+		self.check_zero_negative_8(result);
 		
 		result
 	}
@@ -1013,14 +1025,14 @@ impl Mc6809 {
 	}
 
 	fn instr_dec(&mut self, mem: &mut Memory, addr: u16) {
-		let value = mem.read_u8(addr);
-		mem.write_u8(addr, self.instr_dec_impl(value));
+		let value = mem.read_8(addr);
+		mem.write_8(addr, self.instr_dec_impl(value));
 	}
 
 	fn instr_eor(&mut self, mem: &mut Memory, addr: u16, value: u8) -> u8 {
-		let value = value ^ mem.read_u8(addr);
+		let value = value ^ mem.read_8(addr);
 		self.cc_overflow = false;
-		self.check_zero_negative_u8(value);
+		self.check_zero_negative_8(value);
 
 		value
 	}
@@ -1037,18 +1049,18 @@ impl Mc6809 {
 
 	fn instr_inca(&mut self, mem: &mut Memory) {
 		let value = self.reg_a;
-		self.reg_a = self.add_u8_and_set_flags(value, 1);
+		self.reg_a = self.add_8_and_set_flags(value, 1);
 	}
 
 	fn instr_incb(&mut self, mem: &mut Memory) {
 		let value = self.reg_b;
-		self.reg_b = self.add_u8_and_set_flags(value, 1);
+		self.reg_b = self.add_8_and_set_flags(value, 1);
 	}
 
 	fn instr_inc(&mut self, mem: &mut Memory, addr: u16) {
-		let value = mem.read_u8(addr);
-		let value = self.add_u8_and_set_flags(value, 1);
-		mem.write_u8(addr, value);
+		let value = mem.read_8(addr);
+		let value = self.add_8_and_set_flags(value, 1);
+		mem.write_8(addr, value);
 	}
 
 	fn instr_jmp(&mut self, mem: &mut Memory, addr: u16) {
@@ -1056,51 +1068,51 @@ impl Mc6809 {
 	}
 
 	fn instr_jsr(&mut self, mem: &mut Memory, addr: u16) {
-		Self::push_u16(&mut self.reg_s, mem, self.reg_pc);
+		Self::push_16(&mut self.reg_s, mem, self.reg_pc);
 		self.reg_pc = addr;
 	}
 
-	fn instr_ld_u8(&mut self, mem: &mut Memory, addr: u16) -> u8 {
-		let value = mem.read_u8(addr);
-		self.check_zero_negative_u8(value);
+	fn instr_ld_8(&mut self, mem: &mut Memory, addr: u16) -> u8 {
+		let value = mem.read_8(addr);
+		self.check_zero_negative_8(value);
 		self.cc_carry = false;
 		value
 	}
 
-	fn instr_ld_u16(&mut self, mem: &mut Memory, addr: u16) -> u16 {
-		let value = mem.read_u16(addr);
-		self.check_zero_negative_u16(value);
+	fn instr_ld_16(&mut self, mem: &mut Memory, addr: u16) -> u16 {
+		let value = mem.read_16(addr);
+		self.check_zero_negative_16(value);
 		self.cc_carry = false;
 		value
 	}
 
 	fn instr_lda(&mut self, mem: &mut Memory, addr: u16) {
-		self.reg_a = self.instr_ld_u8(mem, addr);
+		self.reg_a = self.instr_ld_8(mem, addr);
 	}
 
 	fn instr_ldb(&mut self, mem: &mut Memory, addr: u16) {
-		self.reg_b = self.instr_ld_u8(mem, addr);
+		self.reg_b = self.instr_ld_8(mem, addr);
 	}
 
 	fn instr_ldd(&mut self, mem: &mut Memory, addr: u16) {
-		let value = self.instr_ld_u16(mem, addr);
+		let value = self.instr_ld_16(mem, addr);
 		self.set_reg_d(value);
 	}
 
 	fn instr_lds(&mut self, mem: &mut Memory, addr: u16) {
-		self.reg_s = self.instr_ld_u16(mem, addr);
+		self.reg_s = self.instr_ld_16(mem, addr);
 	}
 
 	fn instr_ldu(&mut self, mem: &mut Memory, addr: u16) {
-		self.reg_u = self.instr_ld_u16(mem, addr);
+		self.reg_u = self.instr_ld_16(mem, addr);
 	}
 
 	fn instr_ldx(&mut self, mem: &mut Memory, addr: u16) {
-		self.reg_x = self.instr_ld_u16(mem, addr);
+		self.reg_x = self.instr_ld_16(mem, addr);
 	}
 
 	fn instr_ldy(&mut self, mem: &mut Memory, addr: u16) {
-		self.reg_y = self.instr_ld_u16(mem, addr);
+		self.reg_y = self.instr_ld_16(mem, addr);
 	}
 
 	fn instr_leas(&mut self, mem: &mut Memory, addr: u16) {
@@ -1121,62 +1133,62 @@ impl Mc6809 {
 		self.cc_negative = 0 == addr;
 	}
 
-	fn instr_st_u8(&mut self, mem: &mut Memory, addr: u16, value: u8) {
-		self.check_zero_negative_reset_overflow_u8(value);
-		mem.write_u8(addr, value);
+	fn instr_st_8(&mut self, mem: &mut Memory, addr: u16, value: u8) {
+		self.check_zero_negative_reset_overflow_8(value);
+		mem.write_8(addr, value);
 	}
 
-	fn instr_st_u16(&mut self, mem: &mut Memory, addr: u16, value: u16) {
-		self.check_zero_negative_reset_overflow_u16(value);
-		mem.write_u16(addr, value);
+	fn instr_st_16(&mut self, mem: &mut Memory, addr: u16, value: u16) {
+		self.check_zero_negative_reset_overflow_16(value);
+		mem.write_16(addr, value);
 	}
 
 	fn instr_sta(&mut self, mem: &mut Memory, addr: u16) {
 		let value = self.reg_a;
-		self.instr_st_u8(mem, addr, value);
+		self.instr_st_8(mem, addr, value);
 	}
 
 	fn instr_stb(&mut self, mem: &mut Memory, addr: u16) {
 		let value = self.reg_b;
-		self.instr_st_u8(mem, addr, value);
+		self.instr_st_8(mem, addr, value);
 	}
 
 	fn instr_std(&mut self, mem: &mut Memory, addr: u16) {
 		let value = self.reg_d();
-		self.instr_st_u16(mem, addr, value);
+		self.instr_st_16(mem, addr, value);
 	}
 
 	fn instr_stu(&mut self, mem: &mut Memory, addr: u16) {
 		let value = self.reg_u;
-		self.instr_st_u16(mem, addr, value);
+		self.instr_st_16(mem, addr, value);
 	}
 
 	fn instr_stx(&mut self, mem: &mut Memory, addr: u16) {
 		let value = self.reg_x;
-		self.instr_st_u16(mem, addr, value);
+		self.instr_st_16(mem, addr, value);
 	}
 
 	fn instr_sty(&mut self, mem: &mut Memory, addr: u16) {
 		let value = self.reg_y;
-		self.instr_st_u16(mem, addr, value);
+		self.instr_st_16(mem, addr, value);
 	}
 
 	fn instr_suba(&mut self, mem: &mut Memory, addr: u16) {
 		let m = self.reg_a;
-		let s = mem.read_u8(addr);
-		self.reg_a = self.sub_u8_and_set_flags(m, s);
+		let s = mem.read_8(addr);
+		self.reg_a = self.sub_8_and_set_flags(m, s);
 	}
 
 	fn instr_subb(&mut self, mem: &mut Memory, addr: u16) {
 		let m = self.reg_b;
-		let s = mem.read_u8(addr);
-		self.reg_b = self.sub_u8_and_set_flags(m, s);
+		let s = mem.read_8(addr);
+		self.reg_b = self.sub_8_and_set_flags(m, s);
 	}
 
 	fn instr_subd(&mut self, mem: &mut Memory, addr: u16) {
 		let m = self.reg_d();
-		let s = mem.read_u16(addr);
-		let result = self.sub_u16_and_set_flags(m, s);
+		let s = mem.read_16(addr);
+		let result = self.sub_16_and_set_flags(m, s);
 		self.set_reg_d(result);
 	}
 
@@ -1196,7 +1208,7 @@ impl Mc6809 {
 		panic!("Unimplemented instruction SYNC");
 	}
 
-	fn get_tfr_reg_u8(&self, reg: u8) -> u8 {
+	fn get_tfr_reg_8(&self, reg: u8) -> u8 {
 		match reg {
 			0b1000 => self.reg_a(),
 			0b1001 => self.reg_b(),
@@ -1206,7 +1218,7 @@ impl Mc6809 {
 		}
 	}
 
-	fn set_tfr_reg_u8(&mut self, reg: u8, value: u8) {
+	fn set_tfr_reg_8(&mut self, reg: u8, value: u8) {
 		match reg {
 			0b1000 => self.set_reg_a(value),
 			0b1001 => self.set_reg_b(value),
@@ -1216,7 +1228,7 @@ impl Mc6809 {
 		}
 	}
 
-	fn get_tfr_reg_u16(&self, reg: u8) -> u16 {
+	fn get_tfr_reg_16(&self, reg: u8) -> u16 {
 		match reg {
 			0b0000 => self.reg_d(),
 			0b0001 => self.reg_x(),
@@ -1228,7 +1240,7 @@ impl Mc6809 {
 		}
 	}
 
-	fn set_tfr_reg_u16(&mut self, reg: u8, value: u16) {
+	fn set_tfr_reg_16(&mut self, reg: u8, value: u16) {
 		match reg {
 			0b0000 => self.set_reg_d(value),
 			0b0001 => self.set_reg_x(value),
@@ -1245,116 +1257,116 @@ impl Mc6809 {
 	}
 
 	fn instr_tfr(&mut self, mem: &mut Memory, addr: u16) {
-		let postbyte = mem.read_u8(addr);
+		let postbyte = mem.read_8(addr);
 
 		let src_reg = postbyte >> 4;
 		let dst_reg = postbyte & 0b1111;
 
-		let is_dst_u16 = Self::is_tfr_reg_16(dst_reg);
-		let is_src_u16 = Self::is_tfr_reg_16(src_reg);
+		let is_dst_16 = Self::is_tfr_reg_16(dst_reg);
+		let is_src_16 = Self::is_tfr_reg_16(src_reg);
 
-		if is_dst_u16 != is_src_u16 {
+		if is_dst_16 != is_src_16 {
 			warn!("Attempted TFR between registers of different size, ignoring");
 			return;
 		}
 
-		match is_dst_u16 {
+		match is_dst_16 {
 			true => {
-				let src_value = self.get_tfr_reg_u16(src_reg);
-				self.set_tfr_reg_u16(dst_reg, src_value);
+				let src_value = self.get_tfr_reg_16(src_reg);
+				self.set_tfr_reg_16(dst_reg, src_value);
 			},
 			false => {
-				let src_value = self.get_tfr_reg_u8(src_reg);
-				self.set_tfr_reg_u8(dst_reg, src_value);
+				let src_value = self.get_tfr_reg_8(src_reg);
+				self.set_tfr_reg_8(dst_reg, src_value);
 			}
 		}
 	}
 
 	fn instr_exg(&mut self, mem: &mut Memory, addr: u16) {
-		let postbyte = mem.read_u8(addr);
+		let postbyte = mem.read_8(addr);
 
 		let reg1 = postbyte >> 4;
 		let reg2 = postbyte & 0b1111;
 
-		let is_reg1_u16 = Self::is_tfr_reg_16(reg1);
-		let is_reg2_u16 = Self::is_tfr_reg_16(reg2);
+		let is_reg1_16 = Self::is_tfr_reg_16(reg1);
+		let is_reg2_16 = Self::is_tfr_reg_16(reg2);
 
-		if is_reg1_u16 != is_reg2_u16 {
+		if is_reg1_16 != is_reg2_16 {
 			warn!("Attempted EXG between registers of different size, ignoring");
 			return;
 		}
 
-		match is_reg1_u16 {
+		match is_reg1_16 {
 			true => {
-				let reg1_value = self.get_tfr_reg_u16(reg1);
-				let reg2_value = self.get_tfr_reg_u16(reg2);
-				self.set_tfr_reg_u16(reg1, reg2_value);
-				self.set_tfr_reg_u16(reg2, reg1_value);
+				let reg1_value = self.get_tfr_reg_16(reg1);
+				let reg2_value = self.get_tfr_reg_16(reg2);
+				self.set_tfr_reg_16(reg1, reg2_value);
+				self.set_tfr_reg_16(reg2, reg1_value);
 			},
 			false => {
-				let reg1_value = self.get_tfr_reg_u8(reg1);
-				let reg2_value = self.get_tfr_reg_u8(reg2);
-				self.set_tfr_reg_u8(reg1, reg2_value);
-				self.set_tfr_reg_u8(reg2, reg1_value);
+				let reg1_value = self.get_tfr_reg_8(reg1);
+				let reg2_value = self.get_tfr_reg_8(reg2);
+				self.set_tfr_reg_8(reg1, reg2_value);
+				self.set_tfr_reg_8(reg2, reg1_value);
 			}
 		}
 	}
 
 	fn instr_tsta(&mut self, mem: &mut Memory) {
 		let reg = self.reg_a;
-		self.check_zero_negative_reset_overflow_u8(reg);
+		self.check_zero_negative_reset_overflow_8(reg);
 	}
 
 	fn instr_tstb(&mut self, mem: &mut Memory) {
 		let reg = self.reg_b;
-		self.check_zero_negative_reset_overflow_u8(reg);
+		self.check_zero_negative_reset_overflow_8(reg);
 	}
 
 	fn instr_tst(&mut self, mem: &mut Memory, addr: u16) {
-		self.check_zero_negative_reset_overflow_u8(mem.read_u8(addr));
+		self.check_zero_negative_reset_overflow_8(mem.read_8(addr));
 	}
 
-	fn push_u8(sp: &mut u16, mem: &mut Memory, value: u8) {
+	fn push_8(sp: &mut u16, mem: &mut Memory, value: u8) {
 		*sp = sp.checked_sub(1).expect("Stack overflow");
-		mem.write_u8(*sp, value);
+		mem.write_8(*sp, value);
 	}
 
-	fn pop_u8(sp: &mut u16, mem: &mut Memory) -> u8 {
-		let value = mem.read_u8(*sp);
+	fn pop_8(sp: &mut u16, mem: &mut Memory) -> u8 {
+		let value = mem.read_8(*sp);
 		*sp = sp.checked_add(1).expect("Stack underflow");
 		value
 	}
 
-	fn push_u16(sp: &mut u16, mem: &mut Memory, value: u16) {
-		let (hi, lo) = unpack_u16(value);
+	fn push_16(sp: &mut u16, mem: &mut Memory, value: u16) {
+		let (hi, lo) = unpack_16(value);
 
-		Self::push_u8(sp, mem, lo);
-		Self::push_u8(sp, mem, hi);
+		Self::push_8(sp, mem, lo);
+		Self::push_8(sp, mem, hi);
 	}
 
-	fn pop_u16(sp: &mut u16, mem: &mut Memory) -> u16 {
-		let hi = Self::pop_u8(sp, mem);
-		let lo = Self::pop_u8(sp, mem);
+	fn pop_16(sp: &mut u16, mem: &mut Memory) -> u16 {
+		let hi = Self::pop_8(sp, mem);
+		let lo = Self::pop_8(sp, mem);
 
-		pack_u16(hi, lo)
+		pack_16(hi, lo)
 	}
 
-	fn check_zero_negative_reset_overflow_u8(&mut self, value: u8) {
+	fn check_zero_negative_reset_overflow_8(&mut self, value: u8) {
 		self.cc_overflow = false;
-		self.check_zero_negative_u8(value);
+		self.check_zero_negative_8(value);
 	}
 	
-	fn check_zero_negative_reset_overflow_u16(&mut self, value: u16) {
+	fn check_zero_negative_reset_overflow_16(&mut self, value: u16) {
 		self.cc_overflow = false;
-		self.check_zero_negative_u16(value);
+		self.check_zero_negative_16(value);
 	}
 
-	fn check_zero_negative_u8(&mut self, value: u8) {
+	fn check_zero_negative_8(&mut self, value: u8) {
 		self.cc_zero = value == 0;
 		self.cc_negative = (value & 0b1000) == 0b1000;
 	}
 
-	fn check_zero_negative_u16(&mut self, value: u16) {
+	fn check_zero_negative_16(&mut self, value: u16) {
 		self.cc_zero = value == 0;
 		self.cc_negative = (value & 0b1000_0000) == 0b1000_0000;
 	}
@@ -1374,36 +1386,36 @@ impl Mc6809 {
 		self.cc_carry = !self.cc_carry;
 	}
 
-	fn sub_u8_and_set_flags(&mut self, a: u8, b: u8) -> u8 {
+	fn sub_8_and_set_flags(&mut self, a: u8, b: u8) -> u8 {
 		let result = u8::wrapping_sub(a, b);
 		self.check_carry_sub(a, b, result);
 		self.check_overflow(a, b, result);
-		self.check_zero_negative_u8(result);
+		self.check_zero_negative_8(result);
 		result
 	}
 
-	fn sub_u16_and_set_flags(&mut self, a: u16, b: u16) -> u16 {
 		let result = u16::wrapping_sub(a, b);
+	fn sub_16_and_set_flags(&mut self, a: u16, b: u16) -> u16 {
 		self.check_carry_sub((a >> 8) as u8, (b >> 8) as u8, (result >> 8) as u8);
 		self.check_overflow((a >> 8) as u8, (b >> 8) as u8, (result >> 8) as u8);
-		self.check_zero_negative_u16(result);
+		self.check_zero_negative_16(result);
 		result
 	}
 
 
-	fn add_u8_and_set_flags(&mut self, a: u8, b: u8) -> u8 {
 		let result = u8::wrapping_add(a, b);
+	fn add_8_and_set_flags(&mut self, a: u8, b: u8) -> u8 {
 		self.check_carry_add(a, b, result);
 		self.check_overflow(a, b, result);
-		self.check_zero_negative_u8(result);
+		self.check_zero_negative_8(result);
 		result
 	}
 
-	fn add_u16_and_set_flags(&mut self, a: u16, b: u16) -> u16 {
 		let result = u16::wrapping_add(a, b);
+	fn add_16_and_set_flags(&mut self, a: u16, b: u16) -> u16 {
 		self.check_carry_add((a >> 8) as u8, (b >> 8) as u8, (result >> 8) as u8);
 		self.check_overflow((a >> 8) as u8, (b >> 8) as u8, (result >> 8) as u8);
-		self.check_zero_negative_u16(result);
+		self.check_zero_negative_16(result);
 		result
 	}
 
@@ -1411,7 +1423,7 @@ impl Mc6809 {
 	pub fn reg_b(&self) -> u8 { self.reg_b }
 
 	pub fn reg_d(&self) -> u16 {
-		pack_u16(self.reg_a, self.reg_b)
+		pack_16(self.reg_a, self.reg_b)
 	}
 
 	pub fn reg_dp(&self) -> u8 { self.reg_dp }
@@ -1449,7 +1461,7 @@ impl Mc6809 {
 	pub fn set_reg_a(&mut self, value: u8) { self.reg_a = value }
 	pub fn set_reg_b(&mut self, value: u8) { self.reg_b = value }
 	pub fn set_reg_d(&mut self, value: u16) {
-		let (hi, lo) = unpack_u16(value);
+		let (hi, lo) = unpack_16(value);
 		self.reg_a = hi;
 		self.reg_b = lo;
 	}
