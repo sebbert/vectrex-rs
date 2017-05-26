@@ -61,7 +61,7 @@ pub enum Command {
 	Quit,
 	Continue,
 	DisplayRegisters,
-	Step,
+	Step { count: usize },
 	ToggleTrace,
 	Disassemble {
 		length: u16,
@@ -121,7 +121,13 @@ impl Command {
 
 		match command {
 			"q" | "quit" | "exit" | ":wq" => Ok(Command::Quit),
-			"s" | "step" => Ok(Command::Step),
+			"s" | "step" => {
+				let count = args.next()
+					.and_then(|a| usize::from_str_radix(a, 10).ok())
+					.unwrap_or(1);
+
+				Ok(Command::Step { count: count })
+			},
 			"r" | "reg" | "registers" => Ok(Command::DisplayRegisters),
 			"c" | "cnt" | "continue" => Ok(Command::Continue),
 			"t" | "trace" => Ok(Command::ToggleTrace),
