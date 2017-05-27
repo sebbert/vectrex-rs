@@ -810,18 +810,30 @@ impl Mc6809 {
 		let reg = self.reg_y();
 		self.sub_16_and_set_flags(mem, reg);
 	}
+
+	fn lsr(&mut self, value: u8) -> u8 {
+		let shifted = value >> 1;
+		self.check_zero_negative_8(shifted);
+		self.cc_carry = value.get_flag(0);
+		shifted
 	}
 
 	fn instr_lsra(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction LSRA");
+		let value = self.reg_a;
+		let value = self.lsr(value);
+		self.reg_a = value;
 	}
 
 	fn instr_lsrb(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction LSRB");
+		let value = self.reg_b;
+		let value = self.lsr(value);
+		self.reg_b = value;
 	}
 
 	fn instr_lsr(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction LSR");
+		let value = mem.read_8(addr);
+		let value = self.lsr(value);
+		mem.write_8(addr, value);
 	}
 
 	fn instr_mul(&mut self, mem: &mut Memory) {
