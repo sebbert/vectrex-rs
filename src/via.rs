@@ -298,16 +298,16 @@ impl Via {
 	}
 
 	pub fn port_b_out(&self) -> u8 {
-		self.orb.with_flag(7, self.port_b_bit_7_out())
+		self.orb.set_flag(7, self.port_b_bit_7_out())
 	}
 
 	pub fn set_ifr(&mut self, value: u8) {
-		if unpack_flag(value, 6) { self.ifr_t1 = false; }
+		if value.get_flag(6) { self.ifr_t1 = false; }
 	}
 	
 	pub fn set_ier(&mut self, value: u8) {
 		let bit = value.get_flag(7);
-		if unpack_flag(value, 6) { self.ifr_t1 = bit; }
+		if value.get_flag(6) { self.ifr_t1 = bit; }
 	}
 
 	pub fn ifr(&self) -> u8 {
@@ -358,7 +358,7 @@ impl Default for ControlLineConfig {
 impl ControlLineConfig {
 	pub fn parse(pcr: u8) -> ControlLineConfig {
 		ControlLineConfig {
-			c1_active_edge: unpack_flag(pcr, 0),
+			c1_active_edge: pcr.get_flag(0),
 			c2_config: ControlLine2Config::parse(pcr)
 		}
 	}
@@ -406,12 +406,12 @@ impl ControlLine2Config {
 		use self::ControlLine2Config::*;
 		let pcr = pcr & 0xf;
 		
-		if unpack_flag(pcr, 3) {
-			if unpack_flag(pcr, 2) {
-				Output(unpack_flag(pcr, 1))
+		if pcr.get_flag(3) {
+			if pcr.get_flag(2) {
+				Output(pcr.get_flag(1))
 			}
 			else {
-				match unpack_flag(pcr, 1) {
+				match pcr.get_flag(1) {
 					true => PulseOutput,
 					false => HandshakeOutput(false)
 				}
@@ -419,8 +419,8 @@ impl ControlLine2Config {
 		}
 		else {
 			Input {
-				active_edge: unpack_flag(pcr, 2),
-				independent_interrupt: unpack_flag(pcr, 1)
+				active_edge: pcr.get_flag(2),
+				independent_interrupt: pcr.get_flag(1)
 			}
 		}
 	}

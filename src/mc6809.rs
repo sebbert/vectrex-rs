@@ -840,7 +840,7 @@ impl Mc6809 {
 		let a = self.reg_a as u16;
 		let b = self.reg_b as u16;
 		let result = a * b;
-		self.cc_carry = unpack_flag(result as u8, 7);
+		self.cc_carry = result.get_flag(7);
 		self.set_reg_d(result);
 	}
 
@@ -882,48 +882,52 @@ impl Mc6809 {
 
 	fn instr_psh(&self, mem: &mut Memory, postbyte: u8, sp: &mut u16) {
 		let original_sp = *sp;
-		if unpack_flag(postbyte, 7) { Self::push_16(sp, mem, self.reg_pc) }
-		if unpack_flag(postbyte, 6) { Self::push_16(sp, mem, original_sp) }
-		if unpack_flag(postbyte, 5) { Self::push_16(sp, mem, self.reg_y) }
-		if unpack_flag(postbyte, 4) { Self::push_16(sp, mem, self.reg_x) }
-		if unpack_flag(postbyte, 3) { Self::push_8(sp, mem, self.reg_dp) }
-		if unpack_flag(postbyte, 2) { Self::push_8(sp, mem, self.reg_b) }
-		if unpack_flag(postbyte, 1) { Self::push_8(sp, mem, self.reg_a) }
-		if unpack_flag(postbyte, 0) { Self::push_8(sp, mem, self.reg_cc()) }
+		if postbyte.get_flag(7) { Self::push_16(sp, mem, self.reg_pc) }
+		if postbyte.get_flag(6) { Self::push_16(sp, mem, original_sp) }
+		if postbyte.get_flag(5) { Self::push_16(sp, mem, self.reg_y) }
+		if postbyte.get_flag(4) { Self::push_16(sp, mem, self.reg_x) }
+		if postbyte.get_flag(3) { Self::push_8(sp, mem, self.reg_dp) }
+		if postbyte.get_flag(2) { Self::push_8(sp, mem, self.reg_b) }
+		if postbyte.get_flag(1) { Self::push_8(sp, mem, self.reg_a) }
+		if postbyte.get_flag(0) { Self::push_8(sp, mem, self.reg_cc()) }
 	}
 
-	fn instr_pshs(&mut self, mem: &mut Memory, postbyte: u16) {
+	fn instr_pshs(&mut self, mem: &mut Memory, addr: u16) {
 		let mut new_s = self.reg_s;
-		self.instr_psh(mem, postbyte as u8, &mut new_s);
+		let postbyte = mem.read_8(addr);
+		self.instr_psh(mem, postbyte, &mut new_s);
 		self.reg_s = new_s;
 	}
 
-	fn instr_pshu(&mut self, mem: &mut Memory, postbyte: u16) {
+	fn instr_pshu(&mut self, mem: &mut Memory, addr: u16) {
 		let mut new_u = self.reg_u;
-		self.instr_psh(mem, postbyte as u8, &mut new_u);
+		let postbyte = mem.read_8(addr);
+		self.instr_psh(mem, postbyte, &mut new_u);
 		self.reg_u = new_u;
 	}
 
 	fn instr_pul(&mut self, mem: &mut Memory, postbyte: u8, sp: &mut u16) {
-		if unpack_flag(postbyte, 0) { self.set_reg_cc(Self::pop_8(sp, mem)); }
-		if unpack_flag(postbyte, 1) { self.reg_a = Self::pop_8(sp, mem); }
-		if unpack_flag(postbyte, 2) { self.reg_b = Self::pop_8(sp, mem); }
-		if unpack_flag(postbyte, 3) { self.reg_dp = Self::pop_8(sp, mem); }
-		if unpack_flag(postbyte, 4) { self.reg_x = Self::pop_16(sp, mem); }
-		if unpack_flag(postbyte, 5) { self.reg_y = Self::pop_16(sp, mem); }
-		if unpack_flag(postbyte, 6) { *sp = Self::pop_16(sp, mem); }
-		if unpack_flag(postbyte, 7) { self.reg_pc = Self::pop_16(sp, mem); }
+		if postbyte.get_flag(0) { self.set_reg_cc(Self::pop_8(sp, mem)); }
+		if postbyte.get_flag(1) { self.reg_a = Self::pop_8(sp, mem); }
+		if postbyte.get_flag(2) { self.reg_b = Self::pop_8(sp, mem); }
+		if postbyte.get_flag(3) { self.reg_dp = Self::pop_8(sp, mem); }
+		if postbyte.get_flag(4) { self.reg_x = Self::pop_16(sp, mem); }
+		if postbyte.get_flag(5) { self.reg_y = Self::pop_16(sp, mem); }
+		if postbyte.get_flag(6) { *sp = Self::pop_16(sp, mem); }
+		if postbyte.get_flag(7) { self.reg_pc = Self::pop_16(sp, mem); }
 	}
 
 	fn instr_puls(&mut self, mem: &mut Memory, addr: u16) {
 		let mut new_s = self.reg_s;
-		self.instr_pul(mem, addr as u8, &mut new_s);
+		let postbyte = mem.read_8(addr);
+		self.instr_pul(mem, postbyte, &mut new_s);
 		self.reg_s = new_s;
 	}
 
 	fn instr_pulu(&mut self, mem: &mut Memory, addr: u16) {
 		let mut new_u = self.reg_u;
-		self.instr_pul(mem, addr as u8, &mut new_u);
+		let postbyte = mem.read_8(addr);
+		self.instr_pul(mem, postbyte, &mut new_u);
 		self.reg_u = new_u;
 	}
 
@@ -1460,14 +1464,14 @@ impl Mc6809 {
 	}
 
 	pub fn set_reg_cc(&mut self, value: u8) {
-		self.cc_carry       = unpack_flag(value, 0);
-		self.cc_overflow    = unpack_flag(value, 1);
-		self.cc_zero        = unpack_flag(value, 2);
-		self.cc_negative    = unpack_flag(value, 3);
-		self.cc_irq_mask    = unpack_flag(value, 4);
-		self.cc_half_carry  = unpack_flag(value, 5);
-		self.cc_firq_mask   = unpack_flag(value, 6);
-		self.cc_entire_flag = unpack_flag(value, 7);
+		self.cc_carry       = value.get_flag(0);
+		self.cc_overflow    = value.get_flag(1);
+		self.cc_zero        = value.get_flag(2);
+		self.cc_negative    = value.get_flag(3);
+		self.cc_irq_mask    = value.get_flag(4);
+		self.cc_half_carry  = value.get_flag(5);
+		self.cc_firq_mask   = value.get_flag(6);
+		self.cc_entire_flag = value.get_flag(7);
 	}
 
 	pub fn set_reg_a(&mut self, value: u8) { self.reg_a = value }
