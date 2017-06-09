@@ -76,9 +76,15 @@ impl Debugger {
 	}
 
 	fn process_command_queue(&mut self) {
+		let mut should_save = false;
+
 		while let Ok(cmd) = self.command_receiver.try_recv() {
 			let cmd = match Command::parse(cmd) {
-				Ok(cmd) => cmd,
+				Ok(cmd) => {
+					// Save on every valid command, works well enough for now
+					should_save = true;
+					cmd
+				},
 				Err(command::ParseError::Empty) => continue,
 				Err(err) => {
 					error!("{}", err);
@@ -212,6 +218,12 @@ impl Debugger {
 			};
 
 			println!("");
+		}
+
+		if should_save {
+			if let Err(err) = self.user_data().save() {
+				warn!("Unable to save user data: {}", err);
+			}
 		}
 	}
 
