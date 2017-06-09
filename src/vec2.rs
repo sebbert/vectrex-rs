@@ -1,4 +1,5 @@
 use std::ops::*;
+use std::fmt;
 
 #[derive(Default,Clone,Copy)]
 pub struct Vec2 {
@@ -27,4 +28,10 @@ impl AddAssign for Vec2 {
 	fn add_assign(&mut self, rhs: Vec2) {
 		*self = *self + rhs;
 	} 
+}
+
+impl fmt::Debug for Vec2 {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "Vec2({}, {})", self.x, self.y)
+	}
 }

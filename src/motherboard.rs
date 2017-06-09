@@ -11,8 +11,7 @@ pub struct Motherboard {
 	bios: Bios,
 	cartridge: Option<Cartridge>,
 	sram: Sram,
-	via: Via,
-	irq: bool
+	via: Via
 }
 
 impl Motherboard {
@@ -21,19 +20,12 @@ impl Motherboard {
 			bios: bios,
 			cartridge: cartridge,
 			sram: Sram::new(),
-			via: Via::new(),
-			irq: false
+			via: Via::new()
 		}
 	}
-
-	pub fn irq(&self) -> bool {
-		self.irq
-	}
-
 	pub fn step_for(&mut self, cycles: usize, line_sink: &mut LineSink) {
-		self.irq = false;
 		for _ in 0..cycles {
-			self.irq |= self.via.step(line_sink);
+			self.via.step(line_sink);
 		}
 	}
 }

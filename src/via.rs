@@ -40,7 +40,7 @@ impl Default for MuxChannel {
 	fn default() -> MuxChannel { MuxChannel::YAxis }
 }
 
-#[derive(Default)]
+#[derive(Default,Debug)]
 pub struct Via {
 	ier_t1: bool,
 	ifr_t1: bool,
@@ -127,6 +127,7 @@ impl Via {
 
 	pub fn read(&mut self, addr: u16) -> u8 {
 		let addr = Self::mask_addr(addr);
+		println!("VIA read: {:x}", addr);
 		match addr {
 			REG_T1_COUNTER_LO => {
 				self.ifr_t1 = false;
@@ -149,6 +150,7 @@ impl Via {
 
 	pub fn write(&mut self, addr: u16, value: u8) {
 		let addr = Self::mask_addr(addr);
+		println!("VIA write: {:x} = {:02x}", addr, value);
 		match addr {
 			REG_T1_COUNTER_LO | REG_T1_LATCH_LO => {
 				self.t1_latch_lo = value;
@@ -180,7 +182,7 @@ impl Via {
 		match pcr.c2_config {
 			Input { active_edge, independent_interrupt } => {
 				debug!("Control line 2 read while in input mode");
-				false
+				true
 			},
 			Output(value) => value,
 			HandshakeOutput(_) => {
@@ -212,6 +214,10 @@ impl Via {
 	
 	fn set_pcr(&mut self, pcr: u8) {
 		let (cb, ca) = ControlLineConfig::parse_cb_ca(pcr);
+		
+		println!("CB: {:?}\nCA: {:?}", cb, ca);
+		
+		
 		self.pcr_cb = cb;
 		self.pcr_ca = ca;
 	}
@@ -344,6 +350,7 @@ impl Via {
 	}
 }
 
+#[derive(Debug)]
 struct ControlLineConfig {
 	c1_active_edge: bool,
 	c2_config: ControlLine2Config

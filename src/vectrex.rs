@@ -21,8 +21,7 @@ impl Vectrex {
 	}
 
 	pub fn step(&mut self, line_sink: &mut LineSink) {
-		let irq = self.motherboard.irq();
-		let cycles = self.cpu.step(&mut self.motherboard, irq);
+		let cycles = self.cpu.step(&mut self.motherboard, false);
 		self.motherboard.step_for(cycles, line_sink);
 	}
 

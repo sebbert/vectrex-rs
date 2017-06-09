@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::ops::*;
+
 #[inline]
 pub fn pack_16(hi: u8, lo: u8) -> u16 {
 	let hi = hi as u16;
@@ -54,18 +56,6 @@ pub fn unpack_flags(value: u8) -> [bool;8] {
 	]
 }
 
-#[inline]
-pub fn unpack_flag(value: u8, flag_index: usize) -> bool {
-	1 == (value >> (flag_index & 0x7)) & 1
-}
-
-#[inline]
-pub fn set_flag(value: u8, flag_index: usize, flag_value: bool) -> u8 {
-	let flag_index = flag_index & 0x7;
-	let mask = !(1 << flag_index);
-	value & mask | ((flag_value as u8) << flag_index)
-}
-
 pub struct Flag<T:Flags> {
 	value: T,
 	flag_index: usize
@@ -73,11 +63,11 @@ pub struct Flag<T:Flags> {
 
 impl<T:Flags> Flag<T> {
 	pub fn set(self, value: bool) -> T {
-		self.value.with_flag(self.flag_index, value)
+		self.value.set_flag(self.flag_index, value)
 	}
 	
 	pub fn set_and(mut self, flag_value: bool) -> Self {
-		self.value = self.value.with_flag(self.flag_index, flag_value);
+		self.value = self.value.set_flag(self.flag_index, flag_value);
 		self
 	}
 	
@@ -88,17 +78,51 @@ impl<T:Flags> Flag<T> {
 
 pub trait Flags : Sized {
 	fn get_flag(self, flag_index: usize) -> bool;
-	fn with_flag(self, flag_index: usize, flag_value: bool) -> Self;
+	fn set_flag(self, flag_index: usize, flag_value: bool) -> Self;
 	fn flag(self, flag_index: usize) -> Flag<Self>;
 }
 
 impl Flags for u8 {
 	fn get_flag(self, flag_index: usize) -> bool {
-		unpack_flag(self, flag_index)
+		1 == (self >> flag_index) & 1
 	}
 	
-	fn with_flag(self, flag_index: usize, flag_value: bool) -> Self {
-		set_flag(self, flag_index, flag_value)
+	fn set_flag(self, flag_index: usize, flag_value: bool) -> Self {
+		self & ((!1) << flag_index) | ((flag_value as u8) << flag_index)
+	}
+	
+	fn flag(self, flag_index: usize) -> Flag<Self> {
+		Flag {
+			value: self,
+			flag_index: flag_index
+		}
+	}
+}
+
+impl Flags for u16 {
+	fn get_flag(self, flag_index: usize) -> bool {
+		1 == (self >> flag_index) & 1
+	}
+	
+	fn set_flag(self, flag_index: usize, flag_value: bool) -> Self {
+		self & ((!1) << flag_index) | ((flag_value as u16) << flag_index)
+	}
+	
+	fn flag(self, flag_index: usize) -> Flag<Self> {
+		Flag {
+			value: self,
+			flag_index: flag_index
+		}
+	}
+}
+
+impl Flags for u32 {
+	fn get_flag(self, flag_index: usize) -> bool {
+		1 == (self >> flag_index) & 1
+	}
+	
+	fn set_flag(self, flag_index: usize, flag_value: bool) -> Self {
+		self & ((!1) << flag_index) | ((flag_value as u32) << flag_index)
 	}
 	
 	fn flag(self, flag_index: usize) -> Flag<Self> {

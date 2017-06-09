@@ -1,5 +1,4 @@
-#[macro_use]
-extern crate log;
+#[macro_use] extern crate log;
 extern crate env_logger;
 
 #[macro_use] extern crate serde_derive;
@@ -21,6 +20,7 @@ mod pack;
 mod debugger;
 mod line_sink;
 mod stupid_debug_line_sink;
+mod buffering_line_sink;
 
 use bios::Bios;
 use cartridge::Cartridge;
