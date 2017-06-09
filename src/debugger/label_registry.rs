@@ -5,7 +5,7 @@ pub struct Label {
 	address: u16
 }
 
-#[derive(Default)]
+#[derive(Default,Clone,Serialize,Deserialize)]
 pub struct LabelRegistry {
 	pub map: HashMap<String, u16>
 }

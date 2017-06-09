@@ -2,6 +2,10 @@
 extern crate log;
 extern crate env_logger;
 
+#[macro_use] extern crate serde_derive;
+extern crate serde;
+extern crate serde_json;
+
 mod vec2;
 mod cartridge;
 mod bios;
@@ -38,7 +42,7 @@ fn main() {
 
 	let vectrex = Vectrex::new(bios, cart);
 	let (cmd_sender, cmd_reciever) = mpsc::channel();
-	let debugger = Debugger::new(vectrex, cmd_reciever);
+	let debugger = Debugger::new(vectrex, cmd_reciever, None);
 
 	let _ = thread::spawn(move || {
 		loop {

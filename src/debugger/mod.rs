@@ -2,12 +2,14 @@
 
 mod command;
 mod label_registry;
+mod user_data;
 
 use self::command::*;
 use self::label_registry::*;
 
 use std::sync::mpsc::Receiver;
 use std::collections::HashSet;
+use self::user_data::*;
 
 use stupid_debug_line_sink::StupidDebugLineSink;
 
@@ -44,14 +46,16 @@ fn format_address(address: &AddressRef, resolved_address: u16) -> String {
 }
 
 impl Debugger {
-	pub fn new(vectrex: Vectrex, command_receiver: Receiver<String>) -> Debugger {
+	pub fn new(vectrex: Vectrex, command_receiver: Receiver<String>, user_data: Option<UserData>) -> Debugger {
+		let user_data = user_data.unwrap_or_default();
+
 		Debugger {
 			vectrex: vectrex,
 			command_receiver: command_receiver,
 			state: State::Debugging,
 			trace_enabled: false,
-			breakpoints: HashSet::new(),
-			labels: LabelRegistry::default()
+			breakpoints: user_data.breakpoints,
+			labels: user_data.labels
 		}
 	}
 
