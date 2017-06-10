@@ -42,7 +42,7 @@ fn main() {
 
 	let vectrex = Vectrex::new(bios, cart);
 	let (cmd_sender, cmd_reciever) = mpsc::channel();
-	let debugger = Debugger::new(vectrex, cmd_reciever, None);
+	let debugger = Debugger::new(vectrex, cmd_reciever, debugger::user_data::UserData::load());
 
 	let _ = thread::spawn(move || {
 		loop {

@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-mod command;
-mod label_registry;
-mod user_data;
+pub mod command;
+pub mod label_registry;
+pub mod user_data;
 
 use self::command::*;
 use self::label_registry::*;
