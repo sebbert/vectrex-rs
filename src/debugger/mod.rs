@@ -109,8 +109,10 @@ impl Debugger {
 				Command::Continue => {
 					self.state = State::Running;
 				},
-				Command::Step => {
-					self.step();
+				Command::Step { count } => {
+					for _ in 0..count {
+						self.step();
+					}
 				},
 				Command::ToggleTrace => {
 					self.trace_enabled = !self.trace_enabled;
