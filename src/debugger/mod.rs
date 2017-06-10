@@ -129,7 +129,10 @@ impl Debugger {
 
 					for _ in 0..length {
 						let (next_pc, instr) = disassembler::parse_instruction(self.mem(), pc);
-						println!("{}", instr);
+						let breakpoint =
+							if self.breakpoints.contains(&pc) { "*" } else { " " };
+
+						println!("{} {}", breakpoint, instr);
 						pc = next_pc;
 					}
 				},
