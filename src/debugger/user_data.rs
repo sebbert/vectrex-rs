@@ -1,7 +1,7 @@
 use debugger::label_registry::*;
 use std::collections::HashSet;
 use std::path::*;
-use std::env::current_dir;
+use std::env::home_dir;
 use serde_json;
 use std::fs::File;
 use std::io::prelude::*;
@@ -17,8 +17,8 @@ pub struct UserData {
 
 impl UserData {
 	pub fn path() -> PathBuf {
-		let mut dir = current_dir().unwrap();
-		dir.push("debugger.json");
+		let mut dir = home_dir().unwrap();
+		dir.push(".vxrs-debugger.json");
 		dir
 	}
 
