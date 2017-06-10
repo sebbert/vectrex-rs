@@ -721,28 +721,54 @@ impl Mc6809 {
 		self.set_reg_cc(value);
 	}
 
+	fn asl(&mut self, value: u8) -> u8 {
+		let value_16 = value as u16;
+		let result = value_16 + value_16;
+		self.check_overflow_8(value, value, result as u8);
+		self.check_carry_add_8(result);
+		self.check_zero_negative_8(result as u8);
+
+		result as u8
+	}
+
+	fn asr(&mut self, value: u8) -> u8 {
+		let value_16 = value as u16;
+		let result = (value_16 >> 1) | value_16 & 0x80;
+
+		self.check_zero_negative_8(result as u8);
+		self.cc_carry = value.get_flag(0);
+
+		result as u8
+	}
+
 	fn instr_asla(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction ASLA");
+		let reg = self.reg_a;
+		self.reg_a = self.asl(reg);
 	}
 
 	fn instr_aslb(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction ASLB");
+		let reg = self.reg_b;
+		self.reg_b = self.asl(reg);
 	}
 
 	fn instr_asl(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction ASL");
+		let value = self.asl(mem.read_8(addr));
+		mem.write_8(addr, value);
 	}
 
 	fn instr_asra(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction ASRA");
+		let reg = self.reg_a;
+		self.reg_a = self.asr(reg);
 	}
 
 	fn instr_asrb(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction ASRB");
+		let reg = self.reg_b;
+		self.reg_b = self.asr(reg);
 	}
 
 	fn instr_asr(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction ASR");
+		let result = self.asr(mem.read_8(addr));
+		mem.write_8(addr, result);
 	}
 
 	fn instr_bit(&mut self, mem: &mut Memory, addr: u16, reg: u8) {
