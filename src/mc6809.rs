@@ -810,43 +810,43 @@ impl Mc6809 {
 	fn instr_cmpa(&mut self, mem: &mut Memory, addr: u16) {
 		let mem = mem.read_8(addr);
 		let reg = self.reg_a();
-		self.sub_8_and_set_flags(mem, reg);
+		self.sub_8_and_set_flags(reg, mem);
 	}
 
 	fn instr_cmpb(&mut self, mem: &mut Memory, addr: u16) {
 		let mem = mem.read_8(addr);
 		let reg = self.reg_b();
-		self.sub_8_and_set_flags(mem, reg);
+		self.sub_8_and_set_flags(reg, mem);
 	}
 
 	fn instr_cmpd(&mut self, mem: &mut Memory, addr: u16) {
 		let mem = mem.read_16(addr);
 		let reg = self.reg_d();
-		self.sub_16_and_set_flags(mem, reg);
+		self.sub_16_and_set_flags(reg, mem);
 	}
 
 	fn instr_cmps(&mut self, mem: &mut Memory, addr: u16) {
 		let mem = mem.read_16(addr);
 		let reg = self.reg_s();
-		self.sub_16_and_set_flags(mem, reg);
+		self.sub_16_and_set_flags(reg, mem);
 	}
 
 	fn instr_cmpu(&mut self, mem: &mut Memory, addr: u16) {
 		let mem = mem.read_16(addr);
 		let reg = self.reg_u();
-		self.sub_16_and_set_flags(mem, reg);
+		self.sub_16_and_set_flags(reg, mem);
 	}
 
 	fn instr_cmpx(&mut self, mem: &mut Memory, addr: u16) {
 		let mem = mem.read_16(addr);
 		let reg = self.reg_x();
-		self.sub_16_and_set_flags(mem, reg);
+		self.sub_16_and_set_flags(reg, mem);
 	}
 
 	fn instr_cmpy(&mut self, mem: &mut Memory, addr: u16) {
 		let mem = mem.read_16(addr);
 		let reg = self.reg_y();
-		self.sub_16_and_set_flags(mem, reg);
+		self.sub_16_and_set_flags(reg, mem);
 	}
 
 	fn lsr(&mut self, value: u8) -> u8 {
