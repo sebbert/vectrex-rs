@@ -110,9 +110,17 @@ impl Debugger {
 					self.state = State::Running;
 				},
 				Command::Step { count } => {
+					self.state = State::Running;
+
 					for _ in 0..count {
+						if self.state != State::Running {
+							break
+						}
+
 						self.step();
 					}
+
+					self.state = State::Debugging;
 				},
 				Command::ToggleTrace => {
 					self.trace_enabled = !self.trace_enabled;
