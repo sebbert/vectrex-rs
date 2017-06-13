@@ -173,11 +173,13 @@ impl Debugger {
 							.collect::<Vec<_>>()
 							.join(", ");
 
+						print!("{:04x}", addr);
+
 						if !labels_str.is_empty() {
-							print!("({}) ", labels_str);
+							print!(" ({})", labels_str);
 						}
 
-						println!("{:04x}", addr);
+						println!("");
 					}
 				},
 				Command::ListLabels => {
