@@ -1549,10 +1549,5 @@ impl Mc6809 {
 }
 
 fn offset_address(addr: u16, offset: i16) -> u16 {
-	if offset >= 0 {
-		addr.wrapping_add(offset as u16)
-	}
-	else {
-		addr.wrapping_sub(-offset as u16)
-	}
+	addr.wrapping_add(offset as u16)
 }
