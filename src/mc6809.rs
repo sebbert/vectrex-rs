@@ -1433,7 +1433,7 @@ impl Mc6809 {
 	}
 	
 	fn check_overflow_8(&mut self, a: u8, b: u8, r: u8) {
-		self.cc_overflow = (a^b^r^(r>>1)).get_flag(7)
+		self.cc_overflow = (!(a^b) & (a^r)).get_flag(7)
 	}
 	
 	fn check_carry_add_8(&mut self, result: u16) {
