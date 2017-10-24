@@ -1465,8 +1465,8 @@ impl Mc6809 {
 
 	fn sub_16_and_set_flags(&mut self, a: u16, b: u16) -> u16 {
 		let a = a as u32;
-		let b = b as u32;
-		let result = u32::wrapping_sub(a, b);
+		let b = (!(b as u32)).wrapping_add(1);
+		let result = u32::wrapping_add(a, b);
 		self.check_carry_sub_16(result);
 		self.check_overflow_8((a >> 8) as u8, (b >> 8) as u8, (result >> 8) as u8);
 		self.check_zero_negative_16(result as u16);
