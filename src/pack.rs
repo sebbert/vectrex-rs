@@ -1,7 +1,5 @@
 #![allow(dead_code)]
 
-use std::ops::*;
-
 #[inline]
 pub fn pack_16(hi: u8, lo: u8) -> u16 {
 	let hi = hi as u16;
@@ -82,53 +80,27 @@ pub trait Flags : Sized {
 	fn flag(self, flag_index: usize) -> Flag<Self>;
 }
 
-impl Flags for u8 {
-	fn get_flag(self, flag_index: usize) -> bool {
-		1 == (self >> flag_index) & 1
-	}
-	
-	fn set_flag(self, flag_index: usize, flag_value: bool) -> Self {
-		self & ((!1) << flag_index) | ((flag_value as u8) << flag_index)
-	}
-	
-	fn flag(self, flag_index: usize) -> Flag<Self> {
-		Flag {
-			value: self,
-			flag_index: flag_index
+macro_rules! flags_impl {
+	($t:ty) => {
+		impl Flags for $t {
+			fn get_flag(self, flag_index: usize) -> bool {
+				1 == (self >> flag_index) & 1
+			}
+
+			fn set_flag(self, flag_index: usize, flag_value: bool) -> Self {
+				(self & !(1 << flag_index)) | ((flag_value as $t) << flag_index)
+			}
+
+			fn flag(self, flag_index: usize) -> Flag<Self> {
+				Flag {
+					value: self,
+					flag_index: flag_index
+				}
+			}
 		}
-	}
+	};
 }
 
-impl Flags for u16 {
-	fn get_flag(self, flag_index: usize) -> bool {
-		1 == (self >> flag_index) & 1
-	}
-	
-	fn set_flag(self, flag_index: usize, flag_value: bool) -> Self {
-		self & ((!1) << flag_index) | ((flag_value as u16) << flag_index)
-	}
-	
-	fn flag(self, flag_index: usize) -> Flag<Self> {
-		Flag {
-			value: self,
-			flag_index: flag_index
-		}
-	}
-}
-
-impl Flags for u32 {
-	fn get_flag(self, flag_index: usize) -> bool {
-		1 == (self >> flag_index) & 1
-	}
-	
-	fn set_flag(self, flag_index: usize, flag_value: bool) -> Self {
-		self & ((!1) << flag_index) | ((flag_value as u32) << flag_index)
-	}
-	
-	fn flag(self, flag_index: usize) -> Flag<Self> {
-		Flag {
-			value: self,
-			flag_index: flag_index
-		}
-	}
-}
+flags_impl!(u8);
+flags_impl!(u16);
+flags_impl!(u32);
