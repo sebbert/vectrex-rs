@@ -100,7 +100,7 @@ impl Debugger {
 						Some(a) => a,
 						None => {
 							println!("Unable to resolve address: {}", $address);
-							return;
+							continue
 						}
 					}
 				})
