@@ -21,6 +21,16 @@ const REG_PCR: u16 = 0xc;
 const REG_IFR: u16 = 0xd;
 const REG_IER: u16 = 0xe;
 
+const IR_FLAG_CA2: usize = 0;
+const IR_FLAG_CA1: usize = 1;
+const IR_FLAG_SHIFT_REG: usize = 2;
+const IR_FLAG_CB2: usize = 3;
+const IR_FLAG_CB1: usize = 4;
+const IR_FLAG_TIMER_2: usize = 5;
+const IR_FLAG_TIMER_1: usize = 6;
+const IFR_FLAG_ENABLED: usize = 7;
+const IER_FLAG_SET_CLEAR: usize = 7;
+
 const ORB_FLAG_MUX_ENABLED: usize = 0;
 const ORB_FLAG_MUX_SEL0: usize = 1;
 const ORB_FLAG_MUX_SEL1: usize = 2;
