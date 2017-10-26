@@ -1,3 +1,5 @@
+#![allow(unused)]
+
 use std::ops::*;
 use std::fmt;
 
