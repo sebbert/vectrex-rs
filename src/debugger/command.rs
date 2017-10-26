@@ -63,6 +63,7 @@ pub enum Command {
 	DisplayRegisters,
 	Step { count: usize },
 	ToggleTrace,
+	ToggleBreakpoints,
 	Disassemble {
 		length: u16,
 		address: AddressRef
@@ -173,6 +174,7 @@ impl Command {
 				let (is_delete, addr) = match arg1 {
 					"ls" => return Ok(Command::ListBreakpoints),
 					"rm" => (true, args.next().and_then(AddressRef::parse)),
+					"t" | "toggle" => return Ok(Command::ToggleBreakpoints),
 					addr => (false, AddressRef::parse(addr))
 				};
 

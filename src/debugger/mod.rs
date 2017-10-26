@@ -30,8 +30,9 @@ pub struct Debugger {
 	command_receiver: Receiver<String>,
 	state: State,
 	trace_enabled: bool,
+	breakpoints_enabled: bool,
 	breakpoints: HashSet<u16>,
-	labels: LabelRegistry
+	labels: LabelRegistry,
 }
 
 fn print_label(label: &str, address: u16) {
@@ -54,6 +55,7 @@ impl Debugger {
 			command_receiver: command_receiver,
 			state: State::Debugging,
 			trace_enabled: false,
+			breakpoints_enabled: true,
 			breakpoints: user_data.breakpoints,
 			labels: user_data.labels
 		}
@@ -137,13 +139,23 @@ impl Debugger {
 
 					for _ in 0..length {
 						let (next_pc, instr) = disassembler::parse_instruction(self.mem(), pc);
-						let breakpoint =
-							if self.breakpoints.contains(&pc) { "*" } else { " " };
+						let breakpoint = match self.breakpoints.contains(&pc) {
+							true if self.breakpoints_enabled => "*",
+							true => "'",
+							false => " "
+						};
 
 						println!("{} {}", breakpoint, instr);
 						pc = next_pc;
 					}
 				},
+				Command::ToggleBreakpoints => {
+					self.breakpoints_enabled = !self.breakpoints_enabled;
+					println!("Breakpoints {}", match self.breakpoints_enabled {
+						true => "enabled",
+						false => "disabled"
+					});
+				}
 				Command::AddBreakpoint { ref address } => {
 					let resolved_address = try_resolve_address!(address);
 					match self.breakpoints.insert(resolved_address) {
@@ -242,6 +254,10 @@ impl Debugger {
 		}
 	}
 
+	fn should_break_on(&self, address: u16) -> bool {
+		self.breakpoints_enabled && self.breakpoints.contains(&address)
+	}
+
 	fn step(&mut self) {
 		if self.trace_enabled {
 			let pc = self.cpu().reg_pc();
@@ -253,7 +269,7 @@ impl Debugger {
 		self.vectrex.step(&mut sink);
 
 		let pc = self.cpu().reg_pc();
-		if self.breakpoints.contains(&pc) {
+		if self.should_break_on(pc) {
 			println!("Hit breakpoint at {:04x}", pc);
 			println!("");
 			self.state = State::Debugging;
