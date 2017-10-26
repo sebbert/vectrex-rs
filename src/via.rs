@@ -52,11 +52,8 @@ impl Default for MuxChannel {
 
 #[derive(Default,Debug)]
 pub struct Via {
-	ier_t1: bool,
-	ifr_t1: bool,
-
-	acr_t1_continuous: bool,
-	acr_t1_pb7: bool,
+	ier: u8,
+	ifr: u8,
 
 	t1_counter_lo: u8,
 	t1_counter_hi: u8,
@@ -65,8 +62,18 @@ pub struct Via {
 	t1_pb7: bool,
 	t1_running: bool,
 
+	acr: AuxControlRegister,
+
+	sr: u8,
+	sr_bit_counter: u8,
+	sr_counter: u8,
+	sr_clock: bool,
+
 	ora: u8,
+	ddra: u8,
+
 	orb: u8,
+	ddrb: u8,
 	
 	pcr_ca: ControlLineConfig,
 	pcr_cb: ControlLineConfig,
@@ -88,28 +95,53 @@ pub struct Via {
 
 impl Via {
 	pub fn new() -> Via {
-		Default::default()	
+		let mut via: Via = Default::default();
+		via.sr_bit_counter = 8;
+		via
 	}
 
 	pub fn step(&mut self, line_sink: &mut LineSink) -> bool {
-		let next_t1_counter = self.t1_counter().wrapping_sub(1);
-		self.set_t1_counter(next_t1_counter);
-		
-		if next_t1_counter == 0xffff {
-			self.ifr_t1 = true;
-			self.t1_pb7 = !self.t1_pb7;
-			let latch = self.t1_latch();
-			self.set_t1_counter(latch);
+		if self.t1_running {
+			let next_t1_counter = self.t1_counter().wrapping_sub(1);
+			self.set_t1_counter(next_t1_counter);
+			
+			if next_t1_counter == 0xffff {
+				self.set_ifr(IR_FLAG_TIMER_1);
+				self.t1_pb7 = !self.t1_pb7;
+				let latch = self.t1_latch();
+				self.set_t1_counter(latch);
 
-			if !self.acr_t1_continuous {
-				self.t1_running = !self.t1_running;
+				if !self.acr.t1_control.continuous {
+					self.t1_running = !self.t1_running;
+				}
 			}
 		}
+
+		if self.sr_bit_counter < 8 {
+			match &self.acr.shift_mode {
+				&ShiftRegisterMode::ShiftOut(ref clock) => {
+					match clock {
+						&ShiftRegisterClock::Clock2 => {
+							let hbit = self.sr.get_flag(7) as u8;
+							self.sr = (self.sr << 1) | hbit;
+							self.sr_bit_counter += 1;
+						}
+						_ => {}
+					}
+				}
+				_ => {}
+			};
+
+			if self.sr_bit_counter == 8 {
+				self.set_ifr(IR_FLAG_SHIFT_REG);
+			}
+		}
+
 		self.pulse_state = false;
 		self.hardware_step(line_sink);
 		self.pulse_state = true;
 		
-		self.ier() & self.ifr() != 0
+		(self.read_ier() & self.read_ifr()) & 0x7f != 0
 	}
 	
 	fn hardware_step(&mut self, line_sink: &mut LineSink) {
@@ -140,17 +172,19 @@ impl Via {
 		debug!("VIA read: {:x}", addr);
 		match addr {
 			REG_T1_COUNTER_LO => {
-				self.ifr_t1 = false;
+				self.clear_ifr(IR_FLAG_TIMER_1);
 				self.t1_counter_lo
 			}
 			REG_T1_COUNTER_HI => self.t1_counter_hi,
 			REG_T1_LATCH_LO => self.t1_latch_lo,
 			REG_T1_LATCH_HI => self.t1_latch_hi,
-			REG_IER => self.ier(),
-			REG_IFR => self.ifr(),
-			REG_PCR => self.pcr(),
-			REG_PORT_B => self.orb,
-			REG_PORT_A => self.ora,
+			REG_IER => self.read_ier(),
+			REG_IFR => self.read_ifr(),
+			REG_PCR => self.read_pcr(),
+			REG_PORT_B => self.read_orb(),
+			REG_PORT_A => self.read_ora(),
+			REG_SHIFT => self.read_sr(),
+			REG_ACR => self.read_acr(),
 			_ => {
 				error!("Read from unimplemented VIA reg {:01x}", addr);
 				0
@@ -172,16 +206,19 @@ impl Via {
 				self.t1_latch_hi = value;
 				self.t1_counter_hi = self.t1_latch_hi;
 				self.t1_counter_lo = self.t1_latch_lo;
-				self.ifr_t1 = false;
+				self.clear_ifr(IR_FLAG_TIMER_1);
 				self.t1_pb7 = false;
-			},
-			REG_IER => self.set_ier(value),
-			REG_IFR => self.set_ifr(value),
-			REG_PCR => self.set_pcr(value),
-			REG_PORT_A => self.set_ora(value),
-			REG_PORT_B => self.set_orb(value),
-			REG_PORT_A_NO_HANDSHAKE => self.set_ora(value),
 
+				self.t1_running = true;
+			},
+			REG_IER => self.write_ier(value),
+			REG_IFR => self.write_ifr(value),
+			REG_PCR => self.write_pcr(value),
+			REG_PORT_A => self.write_ora(value),
+			REG_PORT_B => self.write_orb(value),
+			REG_PORT_A_NO_HANDSHAKE => self.write_ora(value),
+			REG_SHIFT => self.write_sr(value),
+			REG_ACR => self.write_acr(value),
 			_ => warn!("Write to unimplemented VIA reg {:01x} = {:02x}", addr, value)
 		}
 	}
@@ -191,7 +228,7 @@ impl Via {
 		use self::ControlLine2Config::*;
 		match pcr.c2_config {
 			Input { active_edge, independent_interrupt } => {
-				debug!("Control line 2 read while in input mode");
+				// debug!("Control line 2 read while in input mode");
 				true
 			},
 			Output(value) => value,
@@ -218,15 +255,12 @@ impl Via {
 
 	fn beam_should_integrate(&self) -> bool { !self.port_b_bit_7_out() }
 	
-	fn pcr(&self) -> u8 {
+	fn read_pcr(&self) -> u8 {
 		ControlLineConfig::encode_cb_ca(&self.pcr_cb, &self.pcr_ca)
 	}
 	
-	fn set_pcr(&mut self, pcr: u8) {
+	fn write_pcr(&mut self, pcr: u8) {
 		let (cb, ca) = ControlLineConfig::parse_cb_ca(pcr);
-		
-		debug!("CB: {:?}\nCA: {:?}", cb, ca);
-		
 		
 		self.pcr_cb = cb;
 		self.pcr_ca = ca;
@@ -234,6 +268,21 @@ impl Via {
 
 	fn mask_addr(addr: u16) -> u16 {
 		addr & 0xf
+	}
+
+	fn trigger_sr(&mut self) {
+		self.sr_bit_counter = 0;
+		self.clear_ifr(IR_FLAG_SHIFT_REG);
+	}
+
+	fn read_sr(&mut self) -> u8 {
+		self.trigger_sr();
+		self.sr
+	}
+
+	fn write_sr(&mut self, value: u8) {
+		self.trigger_sr();
+		self.sr = value;
 	}
 
 	fn t1_counter(&self) -> u16 {
@@ -257,7 +306,7 @@ impl Via {
 	}
 
 	fn port_b_bit_7_out(&self) -> bool {
-		if self.acr_t1_pb7 {
+		if self.acr.t1_control.pb7 {
 			self.t1_pb7
 		}
 		else {
@@ -299,64 +348,62 @@ impl Via {
 		}
 	}
 
-	pub fn set_ora(&mut self, ora: u8) {
+	pub fn read_orb(&self) -> u8 {
+		self.orb & self.ddrb
+	}
+
+	pub fn read_ora(&self) -> u8 {
+		0
+	}
+
+	pub fn write_ora(&mut self, ora: u8) {
 		self.ora = ora;
 		self.mux_update();
 	}
 
-	pub fn set_orb(&mut self, orb: u8) {
+	pub fn write_orb(&mut self, orb: u8) {
 		self.orb = orb;
 		self.mux_update();
 	}
 
-	pub fn port_a_out(&self) -> u8 {
-		self.ora
+	fn clear_ifr(&mut self, flag: usize) {
+		self.ifr = self.ifr.set_flag(flag, false);
 	}
 
-	pub fn port_b_out(&self) -> u8 {
-		self.orb.set_flag(7, self.port_b_bit_7_out())
+	fn set_ifr(&mut self, flag: usize) {
+		self.ifr = self.ifr.set_flag(flag, true);
 	}
 
-	pub fn set_ifr(&mut self, value: u8) {
-		if value.get_flag(6) { self.ifr_t1 = false; }
+	pub fn write_ifr(&mut self, value: u8) {
+		let value = value & 0x7f;
+		self.ifr = self.ifr & !value;
 	}
 	
-	pub fn set_ier(&mut self, value: u8) {
-		let bit = value.get_flag(7);
-		if value.get_flag(6) { self.ifr_t1 = bit; }
-	}
-
-	pub fn ifr(&self) -> u8 {
-		let mut ifr = pack_flags([
-			false,
-			false,
-			false,
-			false,
-			false,
-			false,
-			self.ifr_t1,
-			false
-		]);
-		
-		// Bit 7 is set whenever any interrupt flag is both active and enabled
-		if (ifr & self.ier()) != 0 {
-			ifr |= 0b1000_0000;
+	pub fn write_ier(&mut self, value: u8) {
+		let bit = value.get_flag(IER_FLAG_SET_CLEAR);
+		let value = value.set_flag(IER_FLAG_SET_CLEAR, false);
+		if bit {
+			self.ier |= value;
 		}
-		
-		ifr
+		else {
+			self.ier &= !value;
+		}
 	}
 
-	pub fn ier(&self) -> u8 {
-		pack_flags([
-			false,
-			false,
-			false,
-			false,
-			false,
-			false,
-			self.ier_t1,
-			true
-		])
+	pub fn read_ifr(&self) -> u8 {
+		self.ifr.set_flag(7, (self.ifr & self.ier & 0x7f) != 0)
+	}
+
+	pub fn read_ier(&self) -> u8 {
+		self.ier.set_flag(IER_FLAG_SET_CLEAR, true)
+	}
+
+	fn read_acr(&self) -> u8 {
+		self.acr.encode()
+	}
+
+	fn write_acr(&mut self, value: u8) {
+		self.acr = AuxControlRegister::parse(value);
 	}
 }
 
@@ -392,7 +439,7 @@ impl ControlLineConfig {
 				((active_edge as u8) << 1) | (independent_interrupt as u8)
 			},
 			Output(value) => 0b110 | (value as u8),
-			HandshakeOutput(value) => 0b100,
+			HandshakeOutput(_) => 0b100,
 			PulseOutput => 0b101
 		};
 		
@@ -439,6 +486,156 @@ impl ControlLine2Config {
 				active_edge: pcr.get_flag(2),
 				independent_interrupt: pcr.get_flag(1)
 			}
+		}
+	}
+}
+
+#[derive(Debug)]
+enum ShiftRegisterClock {
+	Timer2,
+	Clock2,
+	ExtClock
+}
+
+impl ShiftRegisterClock {
+	fn parse(bits: u8) -> ShiftRegisterClock {
+		match bits & 0b11 {
+			0 => panic!("Invalid shift register clock"),
+			1 => ShiftRegisterClock::Timer2,
+			2 => ShiftRegisterClock::Clock2,
+			3 => ShiftRegisterClock::ExtClock,
+			_ => unreachable!()
+		}
+	}
+
+	fn encode(&self) -> u8 {
+		use self::ShiftRegisterClock::*;
+		match self {
+			&Timer2 => 1,
+			&Clock2 => 2,
+			&ExtClock => 3
+		}
+	}
+}
+
+#[derive(Debug)]
+enum ShiftRegisterMode {
+	Disabled,
+	ShiftOutFreeRunningT2,
+	ShiftOut(ShiftRegisterClock),
+	ShiftIn(ShiftRegisterClock),
+}
+
+impl Default for ShiftRegisterMode {
+	fn default() -> Self {
+		ShiftRegisterMode::Disabled
+	}
+}
+
+impl ShiftRegisterMode {
+	fn parse(mode_bits: u8) -> ShiftRegisterMode {
+		let mode_bits = mode_bits & 0b111;
+		match mode_bits {
+			0b000 => ShiftRegisterMode::Disabled,
+			0b100 => ShiftRegisterMode::ShiftOutFreeRunningT2,
+			_ => {
+				let clock = ShiftRegisterClock::parse(mode_bits);
+				match mode_bits.get_flag(2) {
+					true => ShiftRegisterMode::ShiftOut(clock),
+					false => ShiftRegisterMode::ShiftIn(clock)
+				}
+			}
+		}
+	}
+
+	fn encode(&self) -> u8 {
+		use self::ShiftRegisterMode::*;
+		match self {
+			&Disabled => 0b000,
+			&ShiftOutFreeRunningT2 => 0b100,
+			&ShiftOut(ref clock) => 0b100 | clock.encode(),
+			&ShiftIn(ref clock) => clock.encode()
+		}
+	}
+}
+
+#[derive(Default,Debug)]
+struct AuxControlRegister {
+	latch_pa: bool,
+	latch_pb: bool,
+	shift_mode: ShiftRegisterMode,
+	t1_control: Timer1Control,
+	t2_control: Timer2Control,
+}
+
+impl AuxControlRegister {
+	fn parse(acr: u8) -> AuxControlRegister {
+		AuxControlRegister {
+			latch_pa: acr.get_flag(0),
+			latch_pb: acr.get_flag(1),
+			shift_mode: ShiftRegisterMode::parse(acr >> 2),
+			t2_control: Timer2Control::parse(acr >> 5),
+			t1_control: Timer1Control::parse(acr >> 6),
+		}
+	}
+
+	fn encode(&self) -> u8 {
+		let mut acr: u8 = 0;
+		
+		acr = acr.set_flag(0, self.latch_pa);
+		acr = acr.set_flag(1, self.latch_pb);
+		acr |= self.shift_mode.encode() << 2;
+		acr |= self.t2_control.encode() << 5;
+		acr |= self.t1_control.encode() << 6;
+		
+		acr
+	}
+}
+
+#[derive(Default,Debug)]
+struct Timer1Control {
+	continuous: bool,
+	pb7: bool
+}
+
+impl Timer1Control {
+	fn parse(bits: u8) -> Timer1Control {
+		Timer1Control {
+			continuous: bits.get_flag(0),
+			pb7: bits.get_flag(1)
+		}
+	}
+
+	fn encode(&self) -> u8 {
+		0.set_flag(0, self.continuous)
+		 .set_flag(1, self.pb7)
+	}
+}
+
+#[derive(Debug)]
+enum Timer2Control {
+	TimedInterrupt,
+	CountDown
+}
+
+impl Default for Timer2Control {
+	fn default() -> Timer2Control {
+		Timer2Control::TimedInterrupt
+	}
+}
+
+impl Timer2Control {
+	fn parse(bits: u8) -> Timer2Control {
+		match bits & 1 {
+			0 => Timer2Control::TimedInterrupt,
+			_ => Timer2Control::CountDown
+		}
+	}
+
+	fn encode(&self) -> u8 {
+		match self {
+			&Timer2Control::TimedInterrupt => 0,
+			&Timer2Control::CountDown => 1
 		}
 	}
 }
