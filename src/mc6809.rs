@@ -362,10 +362,18 @@ impl Mc6809 {
 			0xea => indexed!(Self::instr_orb, 4),
 			0xfa => extended!(Self::instr_orb, 5),
 			0x1a => immediate8!(Self::instr_orcc, 3),
-			0x34 => immediate8!(Self::instr_pshs, 5),
-			0x36 => immediate8!(Self::instr_pshu, 5),
-			0x35 => immediate8!(Self::instr_puls, 5),
-			0x37 => immediate8!(Self::instr_pulu, 5),
+			0x34 | 0x36 => immediate8!(|cpu: &mut Mc6809, mem: &mut Memory, addr: u16| {
+				match op {
+					0x34 => cpu.instr_pshs(mem, addr, &mut cycles),
+					_x36 => cpu.instr_pshu(mem, addr, &mut cycles),
+				}
+			}, 5),
+			0x35 | 0x37 => immediate8!(|cpu: &mut Mc6809, mem: &mut Memory, addr: u16| {
+				match op {
+					0x35 => cpu.instr_puls(mem, addr, &mut cycles),
+					_x37 => cpu.instr_pulu(mem, addr, &mut cycles),
+				}
+			}, 5),
 			0x49 => inherent!(Self::instr_rola, 2),
 			0x59 => inherent!(Self::instr_rolb, 2),
 			0x09 => direct!(Self::instr_rol, 6),
@@ -918,7 +926,8 @@ impl Mc6809 {
 		panic!("Unimplemented instruction ORCC");
 	}
 
-	fn instr_psh(&self, mem: &mut Memory, postbyte: u8, sp: &mut u16) {
+	fn instr_psh(&self, mem: &mut Memory, postbyte: u8, sp: &mut u16, cycles: &mut usize) {
+		*cycles += postbyte.count_ones() as usize;
 		let original_sp = *sp;
 		if postbyte.get_flag(7) { Self::push_16(sp, mem, self.reg_pc) }
 		if postbyte.get_flag(6) { Self::push_16(sp, mem, original_sp) }
@@ -930,21 +939,21 @@ impl Mc6809 {
 		if postbyte.get_flag(0) { Self::push_8(sp, mem, self.reg_cc()) }
 	}
 
-	fn instr_pshs(&mut self, mem: &mut Memory, addr: u16) {
+	fn instr_pshs(&mut self, mem: &mut Memory, addr: u16, cycles: &mut usize) {
 		let mut new_s = self.reg_s;
 		let postbyte = mem.read_8(addr);
-		self.instr_psh(mem, postbyte, &mut new_s);
+		self.instr_psh(mem, postbyte, &mut new_s, cycles);
 		self.reg_s = new_s;
 	}
 
-	fn instr_pshu(&mut self, mem: &mut Memory, addr: u16) {
+	fn instr_pshu(&mut self, mem: &mut Memory, addr: u16, cycles: &mut usize) {
 		let mut new_u = self.reg_u;
 		let postbyte = mem.read_8(addr);
-		self.instr_psh(mem, postbyte, &mut new_u);
+		self.instr_psh(mem, postbyte, &mut new_u, cycles);
 		self.reg_u = new_u;
 	}
 
-	fn instr_pul(&mut self, mem: &mut Memory, postbyte: u8, sp: &mut u16) {
+	fn instr_pul(&mut self, mem: &mut Memory, postbyte: u8, sp: &mut u16, cycles: &mut usize) {
 		if postbyte.get_flag(0) { self.set_reg_cc(Self::pop_8(sp, mem)); }
 		if postbyte.get_flag(1) { self.reg_a = Self::pop_8(sp, mem); }
 		if postbyte.get_flag(2) { self.reg_b = Self::pop_8(sp, mem); }
@@ -955,17 +964,17 @@ impl Mc6809 {
 		if postbyte.get_flag(7) { self.reg_pc = Self::pop_16(sp, mem); }
 	}
 
-	fn instr_puls(&mut self, mem: &mut Memory, addr: u16) {
+	fn instr_puls(&mut self, mem: &mut Memory, addr: u16, cycles: &mut usize) {
 		let mut new_s = self.reg_s;
 		let postbyte = mem.read_8(addr);
-		self.instr_pul(mem, postbyte, &mut new_s);
+		self.instr_pul(mem, postbyte, &mut new_s, cycles);
 		self.reg_s = new_s;
 	}
 
-	fn instr_pulu(&mut self, mem: &mut Memory, addr: u16) {
+	fn instr_pulu(&mut self, mem: &mut Memory, addr: u16, cycles: &mut usize) {
 		let mut new_u = self.reg_u;
 		let postbyte = mem.read_8(addr);
-		self.instr_pul(mem, postbyte, &mut new_u);
+		self.instr_pul(mem, postbyte, &mut new_u, cycles);
 		self.reg_u = new_u;
 	}
 
