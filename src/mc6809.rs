@@ -88,14 +88,14 @@ impl Mc6809 {
 		self.reg_pc = self.reg_pc.wrapping_add(1);
 
 		macro_rules! inherent {
-			($f:path, $cycles:expr) => ({
+			($f:expr, $cycles:expr) => ({
 				cycles += $cycles;
 				$f(self, mem);
 			})
 		}
 
 		macro_rules! immediate8 {
-			($f:path, $cycles:expr) => ({
+			($f:expr, $cycles:expr) => ({
 				let addr = self.reg_pc;
 				self.reg_pc = self.reg_pc.wrapping_add(1);
 				cycles += $cycles;
@@ -104,7 +104,7 @@ impl Mc6809 {
 		}
 
 		macro_rules! immediate16 {
-			($f:path, $cycles:expr) => ({
+			($f:expr, $cycles:expr) => ({
 				let addr = self.reg_pc;
 				self.reg_pc = self.reg_pc.wrapping_add(2);
 				cycles += $cycles;
@@ -113,7 +113,7 @@ impl Mc6809 {
 		}
 
 		macro_rules! direct {
-			($f:path, $cycles:expr) => ({
+			($f:expr, $cycles:expr) => ({
 				let addr_lo = mem.read_8(self.reg_pc);
 				let addr = pack_16(self.reg_dp, addr_lo);
 				self.reg_pc = self.reg_pc.wrapping_add(1);
@@ -123,7 +123,7 @@ impl Mc6809 {
 		}
 
 		macro_rules! extended {
-			($f:path, $cycles:expr) => ({
+			($f:expr, $cycles:expr) => ({
 				let addr = mem.read_16(self.reg_pc);
 				self.reg_pc = self.reg_pc.wrapping_add(2);
 				cycles += $cycles;
@@ -132,7 +132,7 @@ impl Mc6809 {
 		}
 
 		macro_rules! indexed {
-			($f:path, $cycles:expr) => ({
+			($f:expr, $cycles:expr) => ({
 				let (addr, index_cycles) = self.parse_indexed(mem);
 				cycles += $cycles + index_cycles;
 				$f(self, mem, addr)
@@ -140,7 +140,7 @@ impl Mc6809 {
 		}
 
 		macro_rules! branch8 {
-			($f:path) => ({
+			($f:expr) => ({
 				cycles += 3;
 				
 				let should_branch = $f(self);
@@ -154,7 +154,7 @@ impl Mc6809 {
 		}
 
 		macro_rules! branch16 {
-			($f:path, $cycles_if_branch:expr, $cycles_if_no_branch:expr) => ({
+			($f:expr, $cycles_if_branch:expr, $cycles_if_no_branch:expr) => ({
 				let should_branch = $f(self);
 
 				self.reg_pc = if should_branch
@@ -169,7 +169,7 @@ impl Mc6809 {
 				}
 			});
 
-			($f:path) => (branch16!($f, 6, 5))
+			($f:expr) => (branch16!($f, 6, 5))
 		}
 
 		const PAGE_2: u8 = 0x10;
