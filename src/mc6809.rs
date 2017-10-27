@@ -260,7 +260,7 @@ impl Mc6809 {
 			0x16 => branch16!(Self::cond_always, 5, 5),
 
 			0x8d | 0x17 => { // BSR and LBSR, respectively
-				cycles += 9;
+				cycles += if op == 0x8d { 7 } else { 9 };
 
 				let (imm_size, addr_offset) = match op {
 					0x8d => (1, mem.read_8(self.reg_pc) as i8 as i16),
