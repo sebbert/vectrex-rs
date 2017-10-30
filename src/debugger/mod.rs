@@ -233,6 +233,10 @@ impl Debugger {
 						false => println!("No breakpoint at {}", format_address(address, resolved_address))
 					}
 				},
+				Command::ClearBreakpoints => {
+					self.breakpoints.clear();
+					println!("All breakpoints cleared");
+				}
 				Command::ListBreakpoints => {
 					println!("Currently active breakpoints:");
 					for addr in &self.breakpoints {

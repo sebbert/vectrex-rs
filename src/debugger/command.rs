@@ -71,6 +71,7 @@ pub enum Command {
 	AddBreakpoint { address: AddressRef },
 	DeleteBreakpoint { address: AddressRef },
 	ListBreakpoints,
+	ClearBreakpoints,
 	SetLabel {
 		label: String,
 		address: AddressRef
@@ -175,6 +176,7 @@ impl Command {
 					"ls" => return Ok(Command::ListBreakpoints),
 					"rm" => (true, args.next().and_then(AddressRef::parse)),
 					"t" | "toggle" => return Ok(Command::ToggleBreakpoints),
+					"clr" | "clear" => return Ok(Command::ClearBreakpoints),
 					addr => (false, AddressRef::parse(addr))
 				};
 
