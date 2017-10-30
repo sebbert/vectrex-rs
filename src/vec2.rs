@@ -26,6 +26,47 @@ impl Add for Vec2 {
 	}
 }
 
+impl Neg for Vec2 {
+	type Output = Vec2;
+
+	fn neg(self) -> Vec2 {
+		Vec2 {
+			x: -self.x,
+			y: -self.y
+		}
+	}
+}
+
+impl Sub for Vec2 {
+	type Output = Vec2;
+
+	fn sub(self, rhs: Vec2) -> Vec2 {
+		self.add(-rhs)
+	}
+}
+
+impl Mul<i32> for Vec2 {
+	type Output = Vec2;
+
+	fn mul(self, rhs: i32) -> Vec2 {
+		Vec2 {
+			x: self.x * rhs,
+			y: self.y * rhs
+		}
+	}
+}
+
+impl Div<i32> for Vec2 {
+	type Output = Vec2;
+
+	fn div(self, rhs: i32) -> Vec2 {
+		Vec2 {
+			x: self.x / rhs,
+			y: self.y / rhs
+		}
+	}
+}
+
 impl AddAssign for Vec2 {
 	fn add_assign(&mut self, rhs: Vec2) {
 		*self = *self + rhs;
