@@ -953,6 +953,7 @@ impl Mc6809 {
 	}
 
 	fn instr_pul(&mut self, mem: &mut Memory, postbyte: u8, sp: &mut u16, cycles: &mut usize) {
+		*cycles += postbyte.count_ones() as usize;
 		if postbyte.get_flag(0) { self.set_reg_cc(Self::pop_8(sp, mem)); }
 		if postbyte.get_flag(1) { self.reg_a = Self::pop_8(sp, mem); }
 		if postbyte.get_flag(2) { self.reg_b = Self::pop_8(sp, mem); }
