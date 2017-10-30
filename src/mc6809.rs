@@ -82,7 +82,13 @@ impl Mc6809 {
 		let op = mem.read_8(self.reg_pc);
 
 		if cfg!(feature = "compare") {
-			println!("{:x}, {:x}, {:x}, {:x}, {:x}", self.reg_pc, op, self.reg_a, self.reg_b, self.reg_cc());
+			println!("{:x}, {:x}, {:x}, {:x}, {:x}, {:x}",
+				self.reg_pc,
+				op,
+				self.reg_a,
+				self.reg_b,
+				self.reg_cc(),
+				mem.read_8(0xd00d));
 		}
 		
 		self.reg_pc = self.reg_pc.wrapping_add(1);
