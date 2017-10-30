@@ -39,6 +39,7 @@ const ORB_FLAG_AY_BDIR: usize = 4;
 const ORB_FLAG_CARTRIDGE_SOMETHING: usize = 6;
 const ORB_FLAG_ZERO_BEAM: usize = 7;
 
+#[derive(Debug)]
 enum MuxChannel {
 	YAxis,
 	XYAxis,
@@ -62,6 +63,12 @@ pub struct Via {
 	t1_pb7: bool,
 	t1_running: bool,
 
+	t2_latch_lo: u8,
+	t2_counter_lo: u8,
+	t2_counter_hi: u8,
+	t2_running: bool,
+	t2_interrupt_pending: bool,
+
 	acr: AuxControlRegister,
 
 	sr: u8,
@@ -74,6 +81,9 @@ pub struct Via {
 
 	orb: u8,
 	ddrb: u8,
+
+	cb2_handshake: bool,
+	cb2_shift: bool,
 	
 	pcr_ca: ControlLineConfig,
 	pcr_cb: ControlLineConfig,
@@ -117,13 +127,23 @@ impl Via {
 			}
 		}
 
+		if self.t2_running {
+			let next_t2_counter = self.t2_counter().wrapping_sub(1);
+			self.set_t2_counter(next_t2_counter);
+
+			if next_t2_counter == 0xffff && self.t2_interrupt_pending {
+				self.set_ifr(IR_FLAG_TIMER_2);
+				self.t2_interrupt_pending = false;
+			}
+		}
+
 		if self.sr_bit_counter < 8 {
 			match &self.acr.shift_mode {
 				&ShiftRegisterMode::ShiftOut(ref clock) => {
 					match clock {
 						&ShiftRegisterClock::Clock2 => {
-							let hbit = self.sr.get_flag(7) as u8;
-							self.sr = (self.sr << 1) | hbit;
+							self.cb2_shift = self.sr.get_flag(7);
+							self.sr = (self.sr << 1) | (self.cb2_shift as u8);
 							self.sr_bit_counter += 1;
 						}
 						_ => {}
@@ -140,6 +160,10 @@ impl Via {
 		self.pulse_state = false;
 		self.hardware_step(line_sink);
 		self.pulse_state = true;
+
+		if cfg!(feature = "compare") {
+			println!("    via: {:x} {:x} {:x}", self.read_orb(), self.t1_counter(), self.ddrb);
+		};
 		
 		(self.read_ier() & self.read_ifr()) & 0x7f != 0
 	}
@@ -147,16 +171,15 @@ impl Via {
 	fn hardware_step(&mut self, line_sink: &mut LineSink) {
 		self.beam_prev_position = self.beam_current_position;
 		
-		self.beam_current_position = if self.beam_should_zero() {
-		 	Vec2::default()
+		if self.beam_should_zero() {
+			self.beam_current_position = Vec2::default()
 		}
 		else if self.beam_should_integrate() {
-			self.beam_current_position + Vec2 {
+			self.beam_current_position += Vec2 {
 				x: self.ora as i32,
 				y: self.y_sh as i32
 			}
 		}
-		else { self.beam_current_position };
 		
 		if self.beam_enabled() {
 			line_sink.append(Line {
@@ -169,7 +192,7 @@ impl Via {
 
 	pub fn read(&mut self, addr: u16) -> u8 {
 		let addr = Self::mask_addr(addr);
-		debug!("VIA read: {:x}", addr);
+		trace!("VIA read: {:x}", addr);
 		match addr {
 			REG_T1_COUNTER_LO => {
 				self.clear_ifr(IR_FLAG_TIMER_1);
@@ -178,11 +201,15 @@ impl Via {
 			REG_T1_COUNTER_HI => self.t1_counter_hi,
 			REG_T1_LATCH_LO => self.t1_latch_lo,
 			REG_T1_LATCH_HI => self.t1_latch_hi,
+			REG_T2_HI => self.read_t2_hi(),
+			REG_T2_LO => self.read_t2_lo(),
 			REG_IER => self.read_ier(),
 			REG_IFR => self.read_ifr(),
 			REG_PCR => self.read_pcr(),
 			REG_PORT_B => self.read_orb(),
 			REG_PORT_A => self.read_ora(),
+			REG_DDRA => self.read_ddra(),
+			REG_DDRB => self.read_ddrb(),
 			REG_SHIFT => self.read_sr(),
 			REG_ACR => self.read_acr(),
 			_ => {
@@ -194,7 +221,7 @@ impl Via {
 
 	pub fn write(&mut self, addr: u16, value: u8) {
 		let addr = Self::mask_addr(addr);
-		debug!("VIA write: {:x} = {:02x}", addr, value);
+		trace!("VIA write: {:x} = {:02x}", addr, value);
 		match addr {
 			REG_T1_COUNTER_LO | REG_T1_LATCH_LO => {
 				self.t1_latch_lo = value;
@@ -211,15 +238,19 @@ impl Via {
 
 				self.t1_running = true;
 			},
+			REG_T2_HI => self.write_t2_hi(value),
+			REG_T2_LO => self.write_t2_lo(value),
 			REG_IER => self.write_ier(value),
 			REG_IFR => self.write_ifr(value),
 			REG_PCR => self.write_pcr(value),
 			REG_PORT_A => self.write_ora(value),
 			REG_PORT_B => self.write_orb(value),
+			REG_DDRA => self.write_ddra(value),
+			REG_DDRB => self.write_ddrb(value),
 			REG_PORT_A_NO_HANDSHAKE => self.write_ora(value),
 			REG_SHIFT => self.write_sr(value),
 			REG_ACR => self.write_acr(value),
-			_ => warn!("Write to unimplemented VIA reg {:01x} = {:02x}", addr, value)
+			_ => error!("Write to unimplemented VIA reg {:01x} = {:02x}", addr, value)
 		}
 	}
 	
@@ -245,8 +276,12 @@ impl Via {
 	}
 	
 	fn cb2(&self) -> bool {
-		// TODO: Shift reg
-		self.control_line_2(&self.pcr_cb)
+		if self.acr.shift_mode.is_output() {
+			self.cb2_shift
+		}
+		else {
+			self.control_line_2(&self.pcr_cb)
+		}
 	}
 	
 	fn beam_should_zero(&self) -> bool { !self.ca2() }
@@ -349,11 +384,16 @@ impl Via {
 	}
 
 	pub fn read_orb(&self) -> u8 {
-		self.orb & self.ddrb
+		if self.acr.t1_control.pb7 {
+			self.orb.set_flag(7, self.t1_pb7)
+		}
+		else {
+			self.orb
+		}
 	}
 
 	pub fn read_ora(&self) -> u8 {
-		0
+		self.ora
 	}
 
 	pub fn write_ora(&mut self, ora: u8) {
@@ -404,6 +444,50 @@ impl Via {
 
 	fn write_acr(&mut self, value: u8) {
 		self.acr = AuxControlRegister::parse(value);
+	}
+
+	fn write_ddra(&mut self, value: u8) {
+		self.ddra = value;
+	}
+
+	fn write_ddrb(&mut self, value: u8) {
+		self.ddrb = value;
+	}
+
+	fn read_ddra(&self) -> u8 { self.ddra }
+	fn read_ddrb(&self) -> u8 { self.ddrb }
+
+	fn write_t2_hi(&mut self, value: u8) {
+		self.t2_counter_hi = value;
+		self.t2_counter_lo = self.t2_latch_lo;
+		self.t2_interrupt_pending = true;
+		self.t2_running = true;
+		self.clear_ifr(IR_FLAG_TIMER_2);
+	}
+
+	fn read_t2_hi(&mut self) -> u8 {
+		self.t2_counter_hi
+	}
+
+	fn write_t2_lo(&mut self, value: u8) {
+		self.t2_latch_lo = value;
+		self.t2_interrupt_pending = false;
+		self.t2_running = false;
+	}
+
+	fn read_t2_lo(&mut self) -> u8 {
+		self.clear_ifr(IR_FLAG_TIMER_2);
+		self.t2_counter_lo
+	}
+
+	fn t2_counter(&self) -> u16 {
+		pack_16(self.t2_counter_hi, self.t2_counter_lo)
+	}
+
+	fn set_t2_counter(&mut self, value: u16) {
+		let (hi, lo) = unpack_16(value);
+		self.t2_counter_hi = hi;
+		self.t2_counter_lo = lo;
 	}
 }
 
@@ -555,6 +639,14 @@ impl ShiftRegisterMode {
 			&ShiftOutFreeRunningT2 => 0b100,
 			&ShiftOut(ref clock) => 0b100 | clock.encode(),
 			&ShiftIn(ref clock) => clock.encode()
+		}
+	}
+	
+	fn is_output(&self) -> bool {
+		match self {
+			&ShiftRegisterMode::ShiftOutFreeRunningT2 |
+			&ShiftRegisterMode::ShiftOut(_) => true,
+			_ => false
 		}
 	}
 }
