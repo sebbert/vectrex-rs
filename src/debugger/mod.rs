@@ -6,17 +6,25 @@ pub mod user_data;
 
 use self::command::*;
 use self::label_registry::*;
-
-use std::sync::mpsc::Receiver;
-use std::collections::HashSet;
 use self::user_data::*;
 
-use stupid_debug_line_sink::StupidDebugLineSink;
+use std::thread;
+use std::sync::mpsc::Receiver;
+use std::collections::HashSet;
+use std::time::{SystemTime, Duration};
 
+use buffering_line_sink::BufferingLineSink;
+use minifb_line_sink::MinifbDriver;
+use line_sink::FrameSink;
 use mc6809::Mc6809;
 use memory::Memory;
 use vectrex::Vectrex;
 use disassembler;
+
+const FRAME_RATE: usize = 30;
+const CYCLES_PER_SECOND: usize = 15_000_000;
+const CYCLES_PER_FRAME: usize = CYCLES_PER_SECOND / FRAME_RATE;
+static FRAME_TIME_NS: u32 = 1_000_000_000 / 30;
 
 #[derive(PartialEq)]
 pub enum State {
@@ -33,6 +41,12 @@ pub struct Debugger {
 	breakpoints_enabled: bool,
 	breakpoints: HashSet<u16>,
 	labels: LabelRegistry,
+
+	buffer_sink: BufferingLineSink,
+	minifb_sink: MinifbDriver,
+
+	frame_cycles: i32,
+	last_frame: SystemTime
 }
 
 fn print_label(label: &str, address: u16) {
@@ -57,9 +71,57 @@ impl Debugger {
 			trace_enabled: false,
 			breakpoints_enabled: true,
 			breakpoints: user_data.breakpoints,
-			labels: user_data.labels
+			labels: user_data.labels,
+			buffer_sink: Default::default(),
+			minifb_sink: MinifbDriver::new(),
+			frame_cycles: CYCLES_PER_FRAME as i32,
+			last_frame: SystemTime::now()
 		}
 	}
+
+	fn should_break_on(&self, address: u16) -> bool {
+		self.breakpoints_enabled && self.breakpoints.contains(&address)
+	}
+
+	fn step(&mut self) {
+		if self.trace_enabled {
+			let pc = self.cpu().reg_pc();
+			let (_, instr) = disassembler::parse_instruction(self.mem(), pc);
+			println!("{}", instr);
+		}
+		let num_cycles = self.vectrex.step(&mut self.buffer_sink);
+		self.frame_cycles -= num_cycles as i32;
+		if self.frame_cycles < 0 {
+			let dt = self.last_frame.elapsed().unwrap();
+			if let Some(sleep_duration) = Duration::new(0, FRAME_TIME_NS).checked_sub(dt) {
+				thread::sleep(sleep_duration);
+			}
+			
+			let lines = self.buffer_sink.collect();
+			(&mut self.minifb_sink as &mut FrameSink).append(lines);
+			self.frame_cycles += CYCLES_PER_FRAME as i32;
+		}
+
+		let pc = self.cpu().reg_pc();
+		if self.should_break_on(pc) {
+			println!("Hit breakpoint at {:04x}", pc);
+			println!("");
+			self.state = State::Debugging;
+		}
+	}
+
+	pub fn run(mut self) {
+		loop {
+			match self.state {
+				State::Quitting => break,
+				State::Debugging => self.process_command_queue(),
+				State::Running => self.step()
+			}
+		}
+	}
+
+	fn cpu(&self) -> &Mc6809 { self.vectrex.cpu() }
+	fn mem(&mut self) -> &mut Memory { self.vectrex.motherboard() }
 
 	pub fn resolve_address(&self, addr: &AddressRef) -> Option<u16> {
 		let cpu = self.vectrex.cpu();
@@ -253,39 +315,4 @@ impl Debugger {
 			}
 		}
 	}
-
-	fn should_break_on(&self, address: u16) -> bool {
-		self.breakpoints_enabled && self.breakpoints.contains(&address)
-	}
-
-	fn step(&mut self) {
-		if self.trace_enabled {
-			let pc = self.cpu().reg_pc();
-			let (_, instr) = disassembler::parse_instruction(self.mem(), pc);
-			println!("{}", instr);
-		}
-
-		let mut sink = StupidDebugLineSink {};
-		self.vectrex.step(&mut sink);
-
-		let pc = self.cpu().reg_pc();
-		if self.should_break_on(pc) {
-			println!("Hit breakpoint at {:04x}", pc);
-			println!("");
-			self.state = State::Debugging;
-		}
-	}
-
-	pub fn run(mut self) {
-		loop {
-			match self.state {
-				State::Quitting => break,
-				State::Debugging => self.process_command_queue(),
-				State::Running => self.step()
-			}
-		}
-	}
-
-	fn cpu(&self) -> &Mc6809 { self.vectrex.cpu() }
-	fn mem(&mut self) -> &mut Memory { self.vectrex.motherboard() }
 }

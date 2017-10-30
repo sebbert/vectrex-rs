@@ -9,3 +9,7 @@ pub struct Line {
 pub trait LineSink {
 	fn append(&mut self, line: Line);
 }
+
+pub trait FrameSink {
+	fn append(&mut self, Vec<Line>);
+}

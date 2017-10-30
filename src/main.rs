@@ -5,6 +5,8 @@ extern crate env_logger;
 extern crate serde;
 extern crate serde_json;
 
+extern crate minifb;
+
 mod vec2;
 mod cartridge;
 mod bios;
@@ -21,6 +23,7 @@ mod debugger;
 mod line_sink;
 mod stupid_debug_line_sink;
 mod buffering_line_sink;
+mod minifb_line_sink;
 
 use bios::Bios;
 use cartridge::Cartridge;
