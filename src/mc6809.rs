@@ -911,7 +911,6 @@ impl Mc6809 {
 	}
 
 	fn instr_nop(&mut self, mem: &mut Memory) {
-		panic!("Unimplemented instruction NOP");
 	}
 
 	fn instr_ora(&mut self, mem: &mut Memory, addr: u16) {
