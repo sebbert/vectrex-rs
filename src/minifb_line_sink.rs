@@ -5,7 +5,6 @@ use minifb::{Window, WindowOptions};
 use line_sink::{Line, LineSink, FrameSink};
 use vec2::*;
 
-
 const WIDTH: usize = 500;
 const HEIGHT: usize = 600;
 const PIXEL_COUNT: usize = WIDTH * HEIGHT;
@@ -48,10 +47,12 @@ impl FrameSink for MinifbDriver {
 
 impl LineSink for MinifbDriver {
 	fn append(&mut self, line: Line) {
-		let scale_factor = (HEIGHT - 1) as i32;
+		let (width, height) = (WIDTH as i32, HEIGHT as i32);
+		let size = Vec2::new(width, height);
+		let half = size / 2;
 		let line = Line {
-			start: line.start / scale_factor,
-			end: line.end / scale_factor,
+			start: (line.start * 8) / width + half,
+			end: (line.end * 8) / width + half,
 			brightness: line.brightness
 		};
 
@@ -60,9 +61,9 @@ impl LineSink for MinifbDriver {
 		let mut y = line.start.y;
 
 		let buf_len = (&self.buffer).len();
-		for x in line.start.x .. line.end.x {
+		for x in line.start.x .. (line.end.x+1) {
 			self.buffer[vbuf_index(x as usize, y as usize).min(buf_len-1)] = !0;
-			if d > 0 {
+			if d >= 0 {
 				y += 1;
 				d -= 2 * difference.x;
 			}
@@ -72,7 +73,7 @@ impl LineSink for MinifbDriver {
 }
 
 fn vbuf_index(x: usize, y: usize) -> usize {
-	let x = if x > WIDTH { WIDTH } else { x };
-	let y = if y > HEIGHT { HEIGHT } else { y };
+	let x = x.max(0).min(WIDTH);
+	let y = y.max(0).min(HEIGHT);
 	x + (y * WIDTH)
 }

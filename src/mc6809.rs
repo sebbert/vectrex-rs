@@ -82,13 +82,14 @@ impl Mc6809 {
 		let op = mem.read_8(self.reg_pc);
 
 		if cfg!(feature = "compare") {
-			println!("{:x}, {:x}, {:x}, {:x}, {:x}, {:x}",
+			println!("{:x}, {:x}, {:x}, {:x}, {:x}, {:x}, {:x}",
 				self.reg_pc,
 				op,
 				self.reg_a,
 				self.reg_b,
 				self.reg_cc(),
-				mem.read_8(0xd00d));
+				self.reg_x,
+				self.reg_y);
 		}
 		
 		self.reg_pc = self.reg_pc.wrapping_add(1);
@@ -560,32 +561,31 @@ impl Mc6809 {
 			return (offset_address(reg.read(self), offset), 1);
 		}
 
+		fn increment(cpu: &mut Mc6809, reg: IndexRegister, increment_by: i16) -> u16 {
+			let addr = reg.read(cpu);
+			let new_addr = match increment_by >= 0 {
+				true => addr.wrapping_add(increment_by as u16),
+				false => addr.wrapping_sub((-increment_by) as u16),
+			};
+
+			reg.write(cpu, new_addr);
+
+			addr
+		}
+
 		match postbyte & 0b0001_1111 {
-			0 => return {
-				let addr = reg.read(self);
-				reg.write(self, addr.wrapping_add(1));
-				(addr, 2)
-			},
-			2 => return {
-				let addr = reg.read(self);
-				reg.write(self, addr.wrapping_sub(1));
-				(addr, 2)
-			},
+			0 => return (increment(self, reg,  1), 2),
+			2 => return (increment(self, reg, -1), 2),
+			1 => return (increment(self, reg,  2), 3),
+			3 => return (increment(self, reg, -2), 3),
 			_ => ()
 		}
+		
 		let index_op = postbyte & 0b1111;
 
 		match index_op {
-			0b0001 => indexed_indirect!(3, || {
-				let addr = reg.read(self);
-				reg.write(self, addr.wrapping_add(1));
-				addr
-			}),
-			0b0011 => indexed_indirect!(3, || {
-				let addr = reg.read(self);
-				reg.write(self, addr.wrapping_sub(1));
-				addr
-			}),
+			0b0001 => indexed_indirect!(3, || increment(self, reg, 2)),
+			0b0011 => indexed_indirect!(3, || increment(self, reg, -2)),
 			0b0100 => indexed_indirect!(0, || reg.read(self)),
 			0b0110 => indexed_indirect!(1, || reg.read(self).wrapping_add(self.reg_a as u16)),
 			0b0101 => indexed_indirect!(1, || reg.read(self).wrapping_add(self.reg_b as u16)),

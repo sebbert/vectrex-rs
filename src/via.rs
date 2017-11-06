@@ -42,7 +42,7 @@ const ORB_FLAG_ZERO_BEAM: usize = 7;
 #[derive(Debug)]
 enum MuxChannel {
 	YAxis,
-	XYAxis,
+	XYOffset,
 	ZAxis,
 	Sound
 }
@@ -62,6 +62,7 @@ pub struct Via {
 	t1_latch_hi: u8,
 	t1_pb7: bool,
 	t1_running: bool,
+	t1_interrupt_pending: bool,
 
 	t2_latch_lo: u8,
 	t2_counter_lo: u8,
@@ -82,21 +83,19 @@ pub struct Via {
 	orb: u8,
 	ddrb: u8,
 
+	ca2: bool,
+
 	cb2_handshake: bool,
 	cb2_shift: bool,
 	
 	pcr_ca: ControlLineConfig,
 	pcr_cb: ControlLineConfig,
-	
-	pulse_state: bool,
 
 	// X, Y and Z sample-and-hold
-	x_sh: i8,
-	y_sh: i8,
-	z_sh: i8,
-	
-	beam_dx: i8,
-	beam_dy: i8,
+	r_sh: u8,
+	x_sh: u8,
+	y_sh: u8,
+	z_sh: u8,
 	
 	beam_brightness: u8,
 	beam_prev_position: Vec2,
@@ -107,6 +106,15 @@ impl Via {
 	pub fn new() -> Via {
 		let mut via: Via = Default::default();
 		via.sr_bit_counter = 8;
+		via.ca2 = true;
+		via.cb2_handshake = true;
+		via.t1_pb7 = true;
+
+		via.x_sh = 0x80;
+		via.y_sh = 0x80;
+		via.z_sh = 0x80;
+		via.r_sh = 0x80;
+
 		via
 	}
 
@@ -114,15 +122,19 @@ impl Via {
 		if self.t1_running {
 			let next_t1_counter = self.t1_counter().wrapping_sub(1);
 			self.set_t1_counter(next_t1_counter);
-			
-			if next_t1_counter == 0xffff {
-				self.set_ifr(IR_FLAG_TIMER_1);
-				self.t1_pb7 = !self.t1_pb7;
-				let latch = self.t1_latch();
-				self.set_t1_counter(latch);
 
-				if !self.acr.t1_control.continuous {
-					self.t1_running = !self.t1_running;
+			if next_t1_counter == 0xffff {
+				if self.acr.t1_control.continuous {
+					self.set_ifr(IR_FLAG_TIMER_1);
+
+					let latch = self.t1_latch();
+					self.set_t1_counter(latch);
+					self.t1_pb7 = !self.t1_pb7;
+				}
+				else if self.t1_interrupt_pending {
+					self.set_ifr(IR_FLAG_TIMER_1);
+					self.t1_pb7 = true;
+					self.t1_interrupt_pending = false;
 				}
 			}
 		}
@@ -157,12 +169,18 @@ impl Via {
 			}
 		}
 
-		self.pulse_state = false;
 		self.hardware_step(line_sink);
-		self.pulse_state = true;
+
+		fn restore_c2_pulse(value: bool, cfg: &ControlLine2Config) -> bool {
+			if let &ControlLine2Config::PulseOutput = cfg { true }
+			else { value }
+		}
+
+		self.cb2_handshake = restore_c2_pulse(self.cb2_handshake, &self.pcr_cb.c2_config);
+		self.ca2 = restore_c2_pulse(self.ca2, &self.pcr_ca.c2_config);
 
 		if cfg!(feature = "compare") {
-			println!("    via: {:x} {:x} {:x}", self.read_orb(), self.t1_counter(), self.ddrb);
+			println!("    via: {:x}", self.t1_counter() & 0xffff);
 		};
 		
 		(self.read_ier() & self.read_ifr()) & 0x7f != 0
@@ -175,10 +193,15 @@ impl Via {
 			self.beam_current_position = Vec2::default()
 		}
 		else if self.beam_should_integrate() {
-			self.beam_current_position += Vec2 {
-				x: self.ora as i32,
-				y: self.y_sh as i32
-			}
+			let r = self.r_sh as u32 as i32;
+			let x = self.x_sh as u32 as i32;
+			let y = self.y_sh as u32 as i32;
+
+			let x = x - r;
+			let y = r - y;
+
+			let delta = Vec2::new(x, y);
+			self.beam_current_position += delta;
 		}
 		
 		if self.beam_enabled() {
@@ -196,6 +219,8 @@ impl Via {
 		match addr {
 			REG_T1_COUNTER_LO => {
 				self.clear_ifr(IR_FLAG_TIMER_1);
+				self.t1_running = false;
+				self.t1_interrupt_pending = false;
 				self.t1_counter_lo
 			}
 			REG_T1_COUNTER_HI => self.t1_counter_hi,
@@ -208,6 +233,7 @@ impl Via {
 			REG_PCR => self.read_pcr(),
 			REG_PORT_B => self.read_orb(),
 			REG_PORT_A => self.read_ora(),
+			REG_PORT_A_NO_HANDSHAKE => self.read_ora_no_handshake(),
 			REG_DDRA => self.read_ddra(),
 			REG_DDRB => self.read_ddrb(),
 			REG_SHIFT => self.read_sr(),
@@ -237,6 +263,7 @@ impl Via {
 				self.t1_pb7 = false;
 
 				self.t1_running = true;
+				self.t1_interrupt_pending = true;
 			},
 			REG_T2_HI => self.write_t2_hi(value),
 			REG_T2_LO => self.write_t2_lo(value),
@@ -244,35 +271,18 @@ impl Via {
 			REG_IFR => self.write_ifr(value),
 			REG_PCR => self.write_pcr(value),
 			REG_PORT_A => self.write_ora(value),
+			REG_PORT_A_NO_HANDSHAKE => self.write_ora_no_handshake(value),
 			REG_PORT_B => self.write_orb(value),
 			REG_DDRA => self.write_ddra(value),
 			REG_DDRB => self.write_ddrb(value),
-			REG_PORT_A_NO_HANDSHAKE => self.write_ora(value),
 			REG_SHIFT => self.write_sr(value),
 			REG_ACR => self.write_acr(value),
 			_ => error!("Write to unimplemented VIA reg {:01x} = {:02x}", addr, value)
 		}
 	}
 	
-	#[allow(unused_variables)]
-	fn control_line_2(&self, pcr: &ControlLineConfig) -> bool {
-		use self::ControlLine2Config::*;
-		match pcr.c2_config {
-			Input { active_edge, independent_interrupt } => {
-				// debug!("Control line 2 read while in input mode");
-				true
-			},
-			Output(value) => value,
-			HandshakeOutput(_) => {
-				error!("VIA Handshaking not implemented");
-				false
-			}
-			PulseOutput => self.pulse_state
-		}
-	}
-	
 	fn ca2(&self) -> bool {
-		self.control_line_2(&self.pcr_ca)
+		self.ca2
 	}
 	
 	fn cb2(&self) -> bool {
@@ -280,13 +290,13 @@ impl Via {
 			self.cb2_shift
 		}
 		else {
-			self.control_line_2(&self.pcr_cb)
+			self.cb2_handshake
 		}
 	}
 	
 	fn beam_should_zero(&self) -> bool { !self.ca2() }
 	
-	fn beam_enabled(&self) -> bool { !self.cb2() }
+	fn beam_enabled(&self) -> bool { self.cb2() }
 
 	fn beam_should_integrate(&self) -> bool { !self.port_b_bit_7_out() }
 	
@@ -299,6 +309,16 @@ impl Via {
 		
 		self.pcr_cb = cb;
 		self.pcr_ca = ca;
+	
+		fn init_control_line_2(pcr: &ControlLineConfig) -> bool {
+			match pcr.c2_config {
+				ControlLine2Config::Output(value) => value,
+				_ => true
+			}
+		}
+
+		self.ca2 = init_control_line_2(&self.pcr_ca);
+		self.cb2_handshake = init_control_line_2(&self.pcr_cb);
 	}
 
 	fn mask_addr(addr: u16) -> u16 {
@@ -350,13 +370,13 @@ impl Via {
 	}
 
 	fn mux_enabled(&self) -> bool {
-		self.orb.get_flag(ORB_FLAG_MUX_ENABLED)
+		!self.orb.get_flag(ORB_FLAG_MUX_ENABLED)
 	}
 
 	fn mux_channel(&self) -> MuxChannel {
-		match (self.orb >> 1) & 3  {
+		match (self.orb >> 1) & 0b11  {
 			0 => MuxChannel::YAxis,
-			1 => MuxChannel::XYAxis,
+			1 => MuxChannel::XYOffset,
 			2 => MuxChannel::ZAxis,
 			3 => MuxChannel::Sound,
 			_ => unreachable!()
@@ -364,16 +384,15 @@ impl Via {
 	}
 
 	fn mux_update(&mut self) {
-		let value = self.ora as i8;
+		let value = self.x_sh;
 
 		if self.mux_enabled() {
 			match self.mux_channel() {
 				MuxChannel::YAxis => {
 					self.y_sh = value;
 				}
-				MuxChannel::XYAxis => {
-					self.x_sh = value;
-					self.y_sh = value;
+				MuxChannel::XYOffset => {
+					self.r_sh = value;
 				}
 				MuxChannel::ZAxis => {
 					self.z_sh = value;
@@ -392,13 +411,29 @@ impl Via {
 		}
 	}
 
-	pub fn read_ora(&self) -> u8 {
+	pub fn read_ora_no_handshake(&mut self) -> u8 {
 		self.ora
 	}
 
-	pub fn write_ora(&mut self, ora: u8) {
+	pub fn read_ora(&mut self) -> u8 {
+		if let ControlLine2Config::HandshakeOutput(_) = self.pcr_ca.c2_config {
+			self.ca2 = false;
+		}
+
+		self.read_ora_no_handshake()
+	}
+
+	pub fn write_ora_no_handshake(&mut self, ora: u8) {
 		self.ora = ora;
+		self.x_sh = ora ^ 0x80;
 		self.mux_update();
+	}
+
+	pub fn write_ora(&mut self, ora: u8) {
+		self.write_ora_no_handshake(ora);
+		if let ControlLine2Config::HandshakeOutput(_) = self.pcr_ca.c2_config {
+			self.ca2 = false;
+		}
 	}
 
 	pub fn write_orb(&mut self, orb: u8) {
