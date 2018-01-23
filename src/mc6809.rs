@@ -711,13 +711,17 @@ impl Mc6809 {
 	fn instr_adda(&mut self, mem: &mut Memory, addr: u16) {
 		let a = self.reg_a;
 		let b = mem.read_8(addr);
-		self.reg_a = self.add_8_and_set_flags(a, b);
+		let result = self.add_8_and_set_flags(a, b);
+		self.reg_a = result;
+		self.check_half_carry_add_8(a, b, result);
 	}
 
 	fn instr_addb(&mut self, mem: &mut Memory, addr: u16) {
 		let a = self.reg_b;
 		let b = mem.read_8(addr);
-		self.reg_b = self.add_8_and_set_flags(a, b);
+		let result = self.add_8_and_set_flags(a, b);
+		self.reg_b = result;
+		self.check_half_carry_add_8(a, b, result);
 	}
 
 	fn instr_addd(&mut self, mem: &mut Memory, addr: u16) {
