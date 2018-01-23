@@ -685,12 +685,27 @@ impl Mc6809 {
 		panic!("Unimplemented instruction ABX");
 	}
 
+	fn instr_adc(&mut self, mem: &mut Memory, addr: u16, reg: u8) -> u8 {
+		let a = mem.read_8(addr);
+		let b = reg;
+		let result = a.wrapping_add(b).wrapping_add(self.cc_carry as u8);
+
+		self.check_carry_add_8(a, b, result);
+		self.check_overflow_8(a, b, result);
+		self.check_zero_negative_8(result);
+		self.check_half_carry_add_8(a, b, result);
+
+		result
+	}
+
 	fn instr_adca(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction ADCA");
+		let reg = self.reg_a;
+		self.reg_a = self.instr_adc(mem, addr, reg);
 	}
 
 	fn instr_adcb(&mut self, mem: &mut Memory, addr: u16) {
-		panic!("Unimplemented instruction ADCB");
+		let reg = self.reg_b;
+		self.reg_b = self.instr_adc(mem, addr, reg);
 	}
 
 	fn instr_adda(&mut self, mem: &mut Memory, addr: u16) {
