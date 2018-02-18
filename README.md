@@ -1,1 +1,3 @@
-vectrex-rs
+## vectrex-rs
+
+Vectrex emulator under development

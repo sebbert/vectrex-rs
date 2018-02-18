@@ -180,7 +180,7 @@ impl Via {
 		self.ca2 = restore_c2_pulse(self.ca2, &self.pcr_ca.c2_config);
 
 		if cfg!(feature = "compare") {
-			println!("    via: {:x}", self.t1_counter() & 0xffff);
+			// println!("    via: {:x} {:x}", self.t1_counter() & 0xffff, self.t2_counter() & 0xffff);
 		};
 		
 		(self.read_ier() & self.read_ifr()) & 0x7f != 0
@@ -208,7 +208,7 @@ impl Via {
 			line_sink.append(Line {
 				start: self.beam_prev_position,
 				end: self.beam_current_position,
-				brightness: 255
+				brightness: self.z_sh
 			})
 		}
 	}

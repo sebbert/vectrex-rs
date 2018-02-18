@@ -16,16 +16,17 @@ pub struct MinifbDriver {
 
 impl MinifbDriver {
 	pub fn new() -> MinifbDriver {
-		let window = Window::new(
+		let mut window = Window::new(
 			"vectrex-rs",
 			WIDTH,
 			HEIGHT,
 			WindowOptions::default()).unwrap();
 
-		MinifbDriver {
-			window,
-			buffer: [0; PIXEL_COUNT]
-		}
+		window.update();
+
+		let buffer = [0; PIXEL_COUNT];
+
+		MinifbDriver { window, buffer }
 	}
 
 	pub fn clear(&mut self) {
@@ -38,8 +39,11 @@ impl MinifbDriver {
 impl FrameSink for MinifbDriver {
 	fn append(&mut self, lines: Vec<Line>) {
 		self.clear();
-		for line in lines {
-			(self as &mut LineSink).append(line);
+		{
+			let sink = self as &mut LineSink;
+			for line in lines {
+				sink.append(line);
+			}
 		}
 		self.window.update_with_buffer(&self.buffer);
 	}
@@ -61,8 +65,13 @@ impl LineSink for MinifbDriver {
 		let mut y = line.start.y;
 
 		let buf_len = (&self.buffer).len();
+
+		let b = line.brightness as u32;
+		let rgb = b | (b << 8) | (b << 16);
+
 		for x in line.start.x .. (line.end.x+1) {
-			self.buffer[vbuf_index(x as usize, y as usize).min(buf_len-1)] = !0;
+			
+			self.buffer[vbuf_index(x as usize, y as usize).min(buf_len-1)] = rgb;
 			if d >= 0 {
 				y += 1;
 				d -= 2 * difference.x;

@@ -42,6 +42,7 @@ fn main() {
 
 	let cart = include_bytes!("../roms/PolePosition.vec");
 	let cart = Cartridge::from_bytes(cart).ok();
+	let cart = None;
 
 	let vectrex = Vectrex::new(bios, cart);
 	let (cmd_sender, cmd_reciever) = mpsc::channel();

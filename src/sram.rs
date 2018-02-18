@@ -6,9 +6,12 @@ pub struct Sram {
 
 impl Sram {
 	pub fn new() -> Sram {
-		Sram {
-			bytes: [0; SRAM_LENGTH as usize]
+		let mut bytes = [0u8; SRAM_LENGTH as usize];
+		for i in 0..bytes.len() {
+			bytes[i] = i as u8 & 0xff;
 		}
+
+		Sram { bytes }
 	}
 
 	pub fn read_8(&self, addr: u16) -> u8 {

@@ -755,13 +755,12 @@ impl Mc6809 {
 	}
 
 	fn asl(&mut self, value: u8) -> u8 {
-		let value_16 = value as u16;
-		let result = value_16 + value_16;
+		self.cc_carry = value.get_flag(7);
+		let result = value << 1;
 		self.check_overflow_8(value, value, result as u8);
-		self.check_carry_add_8(result);
-		self.check_zero_negative_8(result as u8);
+		self.check_zero_negative_8(result);
 
-		result as u8
+		result
 	}
 
 	fn asr(&mut self, value: u8) -> u8 {
@@ -843,7 +842,8 @@ impl Mc6809 {
 	fn instr_cmpa(&mut self, mem: &mut Memory, addr: u16) {
 		let mem = mem.read_8(addr);
 		let reg = self.reg_a();
-		self.sub_8_and_set_flags(reg, mem);
+		let result = self.sub_8_and_set_flags(reg, mem);
+		self.check_half_carry_sub_8(reg, mem, result);
 	}
 
 	fn instr_cmpb(&mut self, mem: &mut Memory, addr: u16) {
@@ -916,7 +916,9 @@ impl Mc6809 {
 	}
 
 	fn neg_8_and_set_flags(&mut self, value: u8) -> u8 {
-		self.add_8_and_set_flags(!value, 1)
+		let result = self.add_8_and_set_flags(!value, 1);
+		self.cc_carry = !self.cc_carry;
+		result
 	}
 
 	fn instr_nega(&mut self, mem: &mut Memory) {
@@ -1096,7 +1098,7 @@ impl Mc6809 {
 	
 	fn instr_dec_impl(&mut self, value: u8) -> u8 {
 		let result = u8::wrapping_sub(value, 1);
-		self.check_overflow_8(value, 1, result);
+		self.check_overflow_8(value, !0, result);
 		self.check_zero_negative_8(result);
 		
 		result
@@ -1220,12 +1222,12 @@ impl Mc6809 {
 
 	fn instr_leax(&mut self, mem: &mut Memory, addr: u16) {
 		self.reg_x = addr;
-		self.cc_negative = 0 == addr;
+		self.cc_zero = 0 == addr;
 	}
 
 	fn instr_leay(&mut self, mem: &mut Memory, addr: u16) {
 		self.reg_y = addr;
-		self.cc_negative = 0 == addr;
+		self.cc_zero = 0 == addr;
 	}
 
 	fn instr_st_8(&mut self, mem: &mut Memory, addr: u16, value: u8) {
@@ -1469,59 +1471,61 @@ impl Mc6809 {
 	fn check_overflow_8(&mut self, a: u8, b: u8, r: u8) {
 		self.cc_overflow = (!(a^b) & (a^r)).get_flag(7)
 	}
-	
-	fn check_carry_add_8(&mut self, result: u16) {
-		self.cc_carry = !result.get_flag(8);
+
+	fn check_half_carry_add_8(&mut self, a: u8, b: u8, result: u8) {
+		self.cc_half_carry = test_carry_add_8(a << 4, b << 4, result << 4);
+	}
+
+	fn check_half_carry_sub_8(&mut self, a: u8, b: u8, result: u8) {
+		self.check_half_carry_add_8(a, (!b).wrapping_add(1), result);
 	}
 	
-	fn check_carry_add_16(&mut self, result: u32) {
-		self.check_carry_add_8((result >> 8) as u16);
+	fn check_carry_add_8(&mut self, a: u8, b: u8, result: u8) {
+		self.cc_carry = test_carry_add_8(a, b, result);
 	}
 	
-	fn check_carry_sub_8(&mut self, result: u16) {
-		self.check_carry_add_8(result);
+	fn check_carry_add_16(&mut self, a: u16, b: u16, result: u16) {
+		self.check_carry_add_8((a >> 8) as u8, (b >> 8) as u8, (result >> 8) as u8);
+	}
+	
+	fn check_carry_sub_8(&mut self, a: u8, b: u8, result: u8) {
+		self.check_carry_add_8(a, b, result);
 		self.cc_carry = !self.cc_carry;
 	}
 	
-	fn check_carry_sub_16(&mut self, result: u32) {
-		self.check_carry_sub_8((result >> 8) as u16);
+	fn check_carry_sub_16(&mut self, a: u16, b: u16, result: u16) {
+		self.check_carry_sub_8((a >> 8) as u8, (b >> 8) as u8, (result >> 8) as u8);
 	}
 
 	fn sub_8_and_set_flags(&mut self, a: u8, b: u8) -> u8 {
-		let a = a as u16;
-		let b = b as u16;
-		let result = u16::wrapping_sub(a, b);
-		self.check_carry_sub_8(result);
+		let b = !b;
+		let result = a.wrapping_add(b).wrapping_add(1);
+		self.check_carry_sub_8(a, b, result);
 		self.check_overflow_8(a as u8, b as u8, result as u8);
 		self.check_zero_negative_8(result as u8);
 		result as u8
 	}
 
 	fn sub_16_and_set_flags(&mut self, a: u16, b: u16) -> u16 {
-		let a = a as u32;
-		let b = (!(b as u32)).wrapping_add(1);
-		let result = u32::wrapping_add(a, b);
-		self.check_carry_sub_16(result);
+		let b = !b;
+		let result = a.wrapping_add(b).wrapping_add(1);
+		self.check_carry_sub_16(a, b, result);
 		self.check_overflow_8((a >> 8) as u8, (b >> 8) as u8, (result >> 8) as u8);
 		self.check_zero_negative_16(result as u16);
 		result as u16
 	}
 
 	fn add_8_and_set_flags(&mut self, a: u8, b: u8) -> u8 {
-		let a = a as u16;
-		let b = b as u16;
-		let result = u16::wrapping_add(a, b);
-		self.check_carry_add_8(result);
+		let result = a.wrapping_add(b);
+		self.check_carry_add_8(a, b, result);
 		self.check_overflow_8(a as u8, b as u8, result as u8);
 		self.check_zero_negative_8(result as u8);
 		result as u8
 	}
 
 	fn add_16_and_set_flags(&mut self, a: u16, b: u16) -> u16 {
-		let a = a as u32;
-		let b = b as u32;
-		let result = u32::wrapping_add(a, b);
-		self.check_carry_add_16(result);
+		let result = a.wrapping_add(b);
+		self.check_carry_add_16(a, b, result);
 		self.check_overflow_8((a >> 8) as u8, (b >> 8) as u8, (result >> 8) as u8);
 		self.check_zero_negative_16(result as u16);
 		result as u16
@@ -1584,4 +1588,8 @@ impl Mc6809 {
 
 fn offset_address(addr: u16, offset: i16) -> u16 {
 	addr.wrapping_add(offset as u16)
+}
+
+fn test_carry_add_8(a: u8, b: u8, result: u8) -> bool {
+	(((a | b) & !result) | (a & b)).get_flag(7)
 }
