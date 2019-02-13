@@ -532,7 +532,7 @@ impl Mc6809 {
 				}
 			}
 			
-			pub fn read(&self, cpu: &Mc6809) -> u16 {
+			pub fn read(&self, cpu: &Mc6809) -> u16 {	
 				match self {
 					&IndexRegister::X => cpu.reg_x(),
 					&IndexRegister::Y => cpu.reg_y(),
@@ -688,14 +688,18 @@ impl Mc6809 {
 	fn instr_adc(&mut self, mem: &mut Memory, addr: u16, reg: u8) -> u8 {
 		let a = mem.read_8(addr);
 		let b = reg;
-		let result = a.wrapping_add(b).wrapping_add(self.cc_carry as u8);
+		let result = u16::wrapping_add(a as u16, b as u16);
 
-		self.check_carry_add_8(a, b, result);
-		self.check_overflow_8(a, b, result);
-		self.check_zero_negative_8(result);
-		self.check_half_carry_add_8(a, b, result);
+		self.check_carry_add_8(result);
+		self.check_overflow_8(a, b, result as u8);
+		self.check_zero_negative_8(result as u8);
+		self.check_half_carry_add_8(a, b);
 
-		result
+		result as u8
+	}
+
+	fn check_half_carry_add_8(&mut self, a: u8, b: u8) {
+		self.cc_half_carry = (((a & 0xf) + (b & 0xf)) & 0x10) == 0x10;
 	}
 
 	fn instr_adca(&mut self, mem: &mut Memory, addr: u16) {
@@ -713,7 +717,7 @@ impl Mc6809 {
 		let b = mem.read_8(addr);
 		let result = self.add_8_and_set_flags(a, b);
 		self.reg_a = result;
-		self.check_half_carry_add_8(a, b, result);
+		self.check_half_carry_add_8(a, b);
 	}
 
 	fn instr_addb(&mut self, mem: &mut Memory, addr: u16) {
@@ -721,7 +725,7 @@ impl Mc6809 {
 		let b = mem.read_8(addr);
 		let result = self.add_8_and_set_flags(a, b);
 		self.reg_b = result;
-		self.check_half_carry_add_8(a, b, result);
+		self.check_half_carry_add_8(a, b);
 	}
 
 	fn instr_addd(&mut self, mem: &mut Memory, addr: u16) {
