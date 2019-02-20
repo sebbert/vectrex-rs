@@ -281,8 +281,6 @@ impl Mc6809 {
 				self.instr_jsr(mem, addr);
 			}
 
-			// Regular ordinary swedish instruction time
-
 			0x3a => inherent!(Self::instr_abx, 3),
 			0x89 => immediate8!(Self::instr_adca, 2),
 			0x99 => direct!(Self::instr_adca, 4),
