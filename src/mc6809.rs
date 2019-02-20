@@ -746,9 +746,9 @@ impl Mc6809 {
 	}
 
 	fn instr_andb(&mut self, mem: &mut Memory, addr: u16) {
-		let reg = self.reg_a;
+		let reg = self.reg_b;
 		let result = self.and(reg, mem.read_8(addr));
-		self.reg_a = result;
+		self.reg_b = result;
 	}
 
 	fn instr_andcc(&mut self, mem: &mut Memory, addr: u16) {
