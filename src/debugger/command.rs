@@ -79,6 +79,7 @@ pub enum Command {
 	RemoveLabel { label: String },
 	ShowLabel { label: String },
 	ListLabels,
+	ClearLabels,
 	ViewMemory {
 		address: AddressRef,
 		length: u16
@@ -154,6 +155,7 @@ impl Command {
 							Some(label) => Command::RemoveLabel { label: label.to_string() },
 							None => return Err(ParseError::MissingArgument("label"))
 						},
+						"clear" | "clr" => Command::ClearLabels,
 						label_arg => match args.next() {
 							Some(addr_arg) => return parse_address(Some(addr_arg))
 								.map(|addr| Command::SetLabel {

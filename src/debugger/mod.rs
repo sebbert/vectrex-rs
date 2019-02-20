@@ -285,6 +285,9 @@ impl Debugger {
 						None => println!("Unknown label '{}'", label)
 					}
 				},
+				Command::ClearLabels => {
+					self.labels = Default::default();
+				},
 				Command::ViewMemory { address, length } => {
 					let address = try_resolve_address!(&address);
 
