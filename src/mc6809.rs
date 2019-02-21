@@ -78,6 +78,20 @@ pub trait SrcDst<D> : Src<D> + Dst<D> {}
 
 impl<T,D> SrcDst<D> for T where T: Src<D> + Dst<D> {}
 
+struct Imm8;
+impl Src<u8> for Imm8 {
+	fn read(self, ctx: &mut Ctx) -> u8 {
+		ctx.cpu.take_8_pc(ctx.mem)
+	}
+}
+
+struct Imm16;
+impl Src<u16> for Imm16 {
+	fn read(self, ctx: &mut Ctx) -> u16 {
+		ctx.cpu.take_16_pc(ctx.mem)
+	}
+}
+
 macro_rules! impl_src_dst_for_reg {
 	( $typename:ident ( $type:ty ) { $getter:ident , $setter:ident } ) => {
 		struct $typename;
@@ -656,14 +670,14 @@ impl Mc6809 {
 		}
 	}
 
-	fn take_8_pc(&mut self, mem: &mut Memory) -> u8 {
+	pub fn take_8_pc(&mut self, mem: &mut Memory) -> u8 {
 		let byte = mem.read_8(self.reg_pc);
 		self.reg_pc = self.reg_pc.wrapping_add(1);
 
 		byte
 	}
 	
-	fn take_16_pc(&mut self, mem: &mut Memory) -> u16 {
+	pub fn take_16_pc(&mut self, mem: &mut Memory) -> u16 {
 		let hi = self.take_8_pc(mem);
 		let lo = self.take_8_pc(mem);
 		pack_16(hi, lo)
