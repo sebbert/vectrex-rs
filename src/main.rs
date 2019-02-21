@@ -21,7 +21,6 @@ mod vectrex;
 mod pack;
 mod debugger;
 mod line_sink;
-mod stupid_debug_line_sink;
 mod buffering_line_sink;
 mod minifb_line_sink;
 
