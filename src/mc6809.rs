@@ -752,7 +752,8 @@ impl Mc6809 {
 	}
 
 	fn instr_andcc(&mut self, mem: &mut Memory, addr: u16) {
-		let value = self.reg_cc() & mem.read_8(addr);
+		let value = self.reg_cc();
+		let value = self.and(value, mem.read_8(addr));
 		self.set_reg_cc(value);
 	}
 
