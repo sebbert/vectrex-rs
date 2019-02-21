@@ -66,6 +66,18 @@ impl<'a> Ctx<'a> {
 	}
 }
 
+pub trait Src<D> {
+	fn read(self, ctx: &mut Ctx) -> D;
+}
+
+pub trait Dst<D> {
+	fn write(self, ctx: &mut Ctx, val: D);
+}
+
+pub trait SrcDst<D> : Src<D> + Dst<D> {}
+
+impl<T,D> SrcDst<D> for T where T: Src<D> + Dst<D> {}
+
 #[allow(dead_code)]
 impl Mc6809 {	
 	pub fn new(mem: &mut Memory) -> Mc6809 {
