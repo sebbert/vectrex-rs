@@ -78,6 +78,34 @@ pub trait SrcDst<D> : Src<D> + Dst<D> {}
 
 impl<T,D> SrcDst<D> for T where T: Src<D> + Dst<D> {}
 
+macro_rules! impl_src_dst_for_reg {
+	( $typename:ident ( $type:ty ) { $getter:ident , $setter:ident } ) => {
+		struct $typename;
+
+		impl Src<$type> for $typename {
+			fn read(self, ctx: &mut Ctx) -> $type {
+				ctx.cpu.$getter()
+			}
+		}
+
+		impl Dst<$type> for $typename {
+			fn write(self, ctx: &mut Ctx, value: $type) {
+				ctx.cpu.$setter(value)
+			}
+		}
+	};
+}
+
+impl_src_dst_for_reg! {  A (u8)  { reg_a,  set_reg_a  } }
+impl_src_dst_for_reg! {  B (u8)  { reg_b,  set_reg_b  } }
+impl_src_dst_for_reg! { DP (u8)  { reg_dp, set_reg_dp } }
+impl_src_dst_for_reg! { CC (u8)  { reg_cc, set_reg_cc } }
+impl_src_dst_for_reg! {  X (u16) { reg_x,  set_reg_x  } }
+impl_src_dst_for_reg! {  Y (u16) { reg_y,  set_reg_y  } }
+impl_src_dst_for_reg! {  U (u16) { reg_u,  set_reg_u  } }
+impl_src_dst_for_reg! {  S (u16) { reg_s,  set_reg_s  } }
+impl_src_dst_for_reg! { PC (u16) { reg_pc, set_reg_pc } }
+
 #[allow(dead_code)]
 impl Mc6809 {	
 	pub fn new(mem: &mut Memory) -> Mc6809 {
