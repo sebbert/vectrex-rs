@@ -55,6 +55,17 @@ impl Display for Mc6809 {
 	}
 }
 
+pub struct Ctx<'a> {
+	pub cpu: &'a mut Mc6809,
+	pub mem: &'a mut Memory,
+}
+
+impl<'a> Ctx<'a> {
+	pub fn new(cpu: &'a mut Mc6809, mem: &'a mut Memory) -> Ctx<'a> {
+		Ctx { cpu, mem }
+	}
+}
+
 #[allow(dead_code)]
 impl Mc6809 {	
 	pub fn new(mem: &mut Memory) -> Mc6809 {
@@ -94,55 +105,57 @@ impl Mc6809 {
 		
 		self.reg_pc = self.reg_pc.wrapping_add(1);
 
+		let ctx = Ctx::new(self, mem);
+
 		macro_rules! inherent {
 			($f:expr, $cycles:expr) => ({
 				cycles += $cycles;
-				$f(self, mem);
+				$f(ctx.cpu, ctx.mem);
 			})
 		}
 
 		macro_rules! immediate8 {
 			($f:expr, $cycles:expr) => ({
-				let addr = self.reg_pc;
-				self.reg_pc = self.reg_pc.wrapping_add(1);
+				let addr = ctx.cpu.reg_pc;
+				ctx.cpu.reg_pc = ctx.cpu.reg_pc.wrapping_add(1);
 				cycles += $cycles;
-				$f(self, mem, addr)
+				$f(ctx.cpu, ctx.mem, addr)
 			})
 		}
 
 		macro_rules! immediate16 {
 			($f:expr, $cycles:expr) => ({
-				let addr = self.reg_pc;
-				self.reg_pc = self.reg_pc.wrapping_add(2);
+				let addr = ctx.cpu.reg_pc;
+				ctx.cpu.reg_pc = ctx.cpu.reg_pc.wrapping_add(2);
 				cycles += $cycles;
-				$f(self, mem, addr)
+				$f(ctx.cpu, ctx.mem, addr)
 			})
 		}
 
 		macro_rules! direct {
 			($f:expr, $cycles:expr) => ({
-				let addr_lo = mem.read_8(self.reg_pc);
-				let addr = pack_16(self.reg_dp, addr_lo);
-				self.reg_pc = self.reg_pc.wrapping_add(1);
+				let addr_lo = ctx.mem.read_8(ctx.cpu.reg_pc);
+				let addr = pack_16(ctx.cpu.reg_dp, addr_lo);
+				ctx.cpu.reg_pc = ctx.cpu.reg_pc.wrapping_add(1);
 				cycles += $cycles;
-				$f(self, mem, addr)
+				$f(ctx.cpu, ctx.mem, addr)
 			})
 		}
 
 		macro_rules! extended {
 			($f:expr, $cycles:expr) => ({
-				let addr = mem.read_16(self.reg_pc);
-				self.reg_pc = self.reg_pc.wrapping_add(2);
+				let addr = ctx.mem.read_16(ctx.cpu.reg_pc);
+				ctx.cpu.reg_pc = ctx.cpu.reg_pc.wrapping_add(2);
 				cycles += $cycles;
-				$f(self, mem, addr)
+				$f(ctx.cpu, ctx.mem, addr)
 			})
 		}
 
 		macro_rules! indexed {
 			($f:expr, $cycles:expr) => ({
-				let (addr, index_cycles) = self.parse_indexed(mem);
+				let (addr, index_cycles) = ctx.cpu.parse_indexed(ctx.mem);
 				cycles += $cycles + index_cycles;
-				$f(self, mem, addr)
+				$f(ctx.cpu, ctx.mem, addr)
 			})
 		}
 
@@ -150,29 +163,29 @@ impl Mc6809 {
 			($f:expr) => ({
 				cycles += 3;
 				
-				let should_branch = $f(self);
-				self.reg_pc = if should_branch {
-					let offset = self.take_8_pc(mem) as i8 as i16;
-					offset_address(self.reg_pc, offset)
+				let should_branch = $f(ctx.cpu);
+				ctx.cpu.reg_pc = if should_branch {
+					let offset = ctx.cpu.take_8_pc(ctx.mem) as i8 as i16;
+					offset_address(ctx.cpu.reg_pc, offset)
 				} else {
-					self.reg_pc.wrapping_add(1)
+					ctx.cpu.reg_pc.wrapping_add(1)
 				}
 			})
 		}
 
 		macro_rules! branch16 {
 			($f:expr, $cycles_if_branch:expr, $cycles_if_no_branch:expr) => ({
-				let should_branch = $f(self);
+				let should_branch = $f(ctx.cpu);
 
-				self.reg_pc = if should_branch
+				ctx.cpu.reg_pc = if should_branch
 				{
 					cycles += $cycles_if_branch;
-					let offset = mem.read_16(self.reg_pc) as i16;
-					offset_address(self.reg_pc, offset)
+					let offset = ctx.mem.read_16(ctx.cpu.reg_pc) as i16;
+					offset_address(ctx.cpu.reg_pc, offset)
 					
 				} else {
 					cycles += $cycles_if_no_branch;	
-					self.reg_pc.wrapping_add(2)
+					ctx.cpu.reg_pc.wrapping_add(2)
 				}
 			});
 
@@ -184,7 +197,7 @@ impl Mc6809 {
 
 		match op {
 			PAGE_2 => {
-				let op = self.take_8_pc(mem);
+				let op = ctx.cpu.take_8_pc(ctx.mem);
 			
 				match op {
 					0x83 => immediate16!(Self::instr_cmpd, 5),
@@ -226,11 +239,11 @@ impl Mc6809 {
 					0x2f => branch16!(Self::cond_signed_less_than_or_equal),
 					0x28 => branch16!(Self::cond_overflow_clear),
 					0x29 => branch16!(Self::cond_overflow_set),
-					_ => self.invalid_opcode(op)
+					_ => ctx.cpu.invalid_opcode(op)
 				}
 			},
 			PAGE_3 => {
-				let op = self.take_8_pc(mem);
+				let op = ctx.cpu.take_8_pc(ctx.mem);
 			
 				match op {
 					0x8c => immediate16!(Self::instr_cmps, 5),
@@ -242,7 +255,7 @@ impl Mc6809 {
 					0xa3 => indexed!(Self::instr_cmpu, 7),
 					0xb3 => extended!(Self::instr_cmpu, 8),
 					0x3f => inherent!(Self::instr_swi3, 20),
-					_ => self.invalid_opcode(op)
+					_ => ctx.cpu.invalid_opcode(op)
 				}
 			},
 
@@ -270,15 +283,15 @@ impl Mc6809 {
 				cycles += if op == 0x8d { 7 } else { 9 };
 
 				let (imm_size, addr_offset) = match op {
-					0x8d => (1, mem.read_8(self.reg_pc) as i8 as i16),
-					_    => (2, mem.read_16(self.reg_pc) as i16)
+					0x8d => (1, ctx.mem.read_8(ctx.cpu.reg_pc) as i8 as i16),
+					_    => (2, ctx.mem.read_16(ctx.cpu.reg_pc) as i16)
 				};
 
-				self.reg_pc = self.reg_pc.wrapping_add(imm_size);
+				ctx.cpu.reg_pc = ctx.cpu.reg_pc.wrapping_add(imm_size);
 
-				let addr = offset_address(self.reg_pc, addr_offset);
+				let addr = offset_address(ctx.cpu.reg_pc, addr_offset);
 
-				self.instr_jsr(mem, addr);
+				ctx.cpu.instr_jsr(ctx.mem, addr);
 			}
 
 			0x3a => inherent!(Self::instr_abx, 3),
@@ -491,7 +504,7 @@ impl Mc6809 {
 			0x0d => direct!(Self::instr_tst, 6),
 			0x6d => indexed!(Self::instr_tst, 6),
 			0x7d => extended!(Self::instr_tst, 7),
-			_ => self.invalid_opcode(op)
+			_ => ctx.cpu.invalid_opcode(op)
 		}
 
 		cycles
