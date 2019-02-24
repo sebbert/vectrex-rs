@@ -1223,12 +1223,12 @@ impl Mc6809 {
 
 	fn instr_leax(&mut self, mem: &mut Memory, addr: u16) {
 		self.reg_x = addr;
-		self.cc_negative = 0 == addr;
+		self.cc_zero = 0 == addr;
 	}
 
 	fn instr_leay(&mut self, mem: &mut Memory, addr: u16) {
 		self.reg_y = addr;
-		self.cc_negative = 0 == addr;
+		self.cc_zero = 0 == addr;
 	}
 
 	fn instr_st_8(&mut self, mem: &mut Memory, addr: u16, value: u8) {
